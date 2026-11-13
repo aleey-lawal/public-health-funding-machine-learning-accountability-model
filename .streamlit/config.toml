@@ -1,0 +1,31 @@
+# =============================================================================
+# Streamlit Theme Configuration
+# Controls the visual appearance of the app
+# =============================================================================
+
+[theme]
+# Primary brand colour (deep navy blue — matches the dashboard header)
+primaryColor = "#1d4ed8"
+
+# Light background for the main content area
+backgroundColor = "#f0f4f8"
+
+# Slightly off-white for sidebar and widget backgrounds
+secondaryBackgroundColor = "#ffffff"
+
+# Dark text for readability on light backgrounds
+textColor = "#111827"
+
+# Monospace font for code blocks
+font = "monospace"
+
+[server]
+# Allow connections from any IP (needed for Streamlit Cloud)
+headless = true
+
+# Default port
+port = 8501
+
+[browser]
+# Disable the "Deploy" button in the top-right corner
+gatherUsageStats = false

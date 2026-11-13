@@ -1,0 +1,52 @@
+# =============================================================================
+# .gitignore — BHCPF Project
+# Files and folders that should NOT be pushed to GitHub
+# =============================================================================
+
+# --- Python virtual environment ---
+venv/
+env/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Jupyter Notebook checkpoints ---
+.ipynb_checkpoints/
+
+# --- Raw data files (may contain sensitive disbursement records) ---
+data/raw/
+*.xlsx
+*.pdf
+!data/sample_data.csv       # Keep sample CSV for demo purposes
+
+# --- ML model artifacts (large binary files) ---
+models/*.pkl
+models/*.joblib
+models/*.h5
+
+# --- Output files ---
+# Keep the 7 CSV result files (no raw data, safe to push)
+!output/
+# --- OS files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- IDE files ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Streamlit secrets (API keys, tokens) ---
+.streamlit/secrets.toml
+
+# --- Environment variables ---
+.env
+.env.local
+
+# --- Log files ---
+*.log
+logs/

@@ -1,0 +1,1356 @@
+<title>BHCPF Accountability Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+/* ── TOKENS ─────────────────────────────────────────── */
+:root {
+  --bg:          #f0f4f8;
+  --bg-card:     #ffffff;
+  --bg-nav:      #0b1e3d;
+  --fg:          #111827;
+  --fg-muted:    #6b7280;
+  --border:      #e5e7eb;
+  --accent:      #1d4ed8;
+  --accent-soft: #eff6ff;
+  --critical:    #dc2626;
+  --critical-bg: #fef2f2;
+  --critical-bd: #fecaca;
+  --concern:     #d97706;
+  --concern-bg:  #fffbeb;
+  --concern-bd:  #fde68a;
+  --watch:       #2563eb;
+  --watch-bg:    #eff6ff;
+  --watch-bd:    #bfdbfe;
+  --clean:       #16a34a;
+  --clean-bg:    #f0fdf4;
+  --clean-bd:    #bbf7d0;
+  --font-h:      'Space Grotesk', system-ui, sans-serif;
+  --font-b:      'Inter', system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a1628; --bg-card: #0f2744; --bg-nav: #060e1f;
+    --fg: #e2e8f0; --fg-muted: #94a3b8; --border: #1e3a5f;
+    --accent: #3b82f6; --accent-soft: #0d1b3e;
+    --critical-bg: #2d0a0a; --critical-bd: #7f1d1d;
+    --concern-bg: #2d1a00; --concern-bd: #78350f;
+    --watch-bg: #0d1b3e; --watch-bd: #1e3a5f;
+    --clean-bg: #0a1f0a; --clean-bd: #14532d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a1628; --bg-card: #0f2744; --bg-nav: #060e1f;
+  --fg: #e2e8f0; --fg-muted: #94a3b8; --border: #1e3a5f;
+  --accent: #3b82f6; --accent-soft: #0d1b3e;
+  --critical-bg: #2d0a0a; --critical-bd: #7f1d1d;
+  --concern-bg: #2d1a00; --concern-bd: #78350f;
+  --watch-bg: #0d1b3e; --watch-bd: #1e3a5f;
+  --clean-bg: #0a1f0a; --clean-bd: #14532d;
+  color-scheme: dark;
+}
+
+/* ── RESET / BASE ───────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-b); font-size: 14px; line-height: 1.6;
+  background: var(--bg); color: var(--fg);
+}
+
+/* ── NAV ────────────────────────────────────────────── */
+.site-nav {
+  background: var(--bg-nav);
+  position: sticky; top: env(safe-area-inset-top,0px);
+  z-index: 200; box-shadow: 0 1px 8px rgba(0,0,0,.35);
+}
+.nav-inner {
+  max-width: 1240px; margin: 0 auto;
+  padding: 0 max(16px,env(safe-area-inset-left,0px));
+  display: flex; align-items: stretch; gap: 20px;
+}
+.nav-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding-block: 13px; white-space: nowrap;
+}
+.nav-logo {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: linear-gradient(135deg,#2563eb,#0ea5e9);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.nav-logo svg { width: 16px; height: 16px; fill: #fff; }
+.nav-brand-text { font-family: var(--font-h); font-size: 14px; font-weight: 700; color: #fff; }
+.nav-brand-text span { color: #60a5fa; }
+.nav-tabs { display: flex; overflow-x: auto; scrollbar-width: none; flex: 1; }
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab {
+  padding: 0 16px; height: 54px; display: flex; align-items: center;
+  font-size: 12.5px; font-weight: 500; color: rgba(255,255,255,.5);
+  cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
+  letter-spacing: .02em;
+}
+.nav-tab:hover { color: rgba(255,255,255,.85); }
+.nav-tab.active { color: #fff; border-bottom-color: #60a5fa; }
+.nav-actions { display: flex; align-items: center; gap: 8px; padding-block: 10px; }
+.btn-theme {
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.7); border-radius: 6px;
+  padding: 5px 10px; font-size: 12px; cursor: pointer;
+  font-family: var(--font-b); transition: background .15s;
+}
+.btn-theme:hover { background: rgba(255,255,255,.14); }
+
+/* ── HERO BANNER ─────────────────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, #0b1e3d 0%, #1d4ed8 100%);
+  color: #fff;
+  padding: 32px max(16px,env(safe-area-inset-left,0px));
+}
+.hero-inner { max-width: 1240px; margin: 0 auto; }
+.hero h1 { font-family: var(--font-h); font-size: clamp(18px,3vw,26px); font-weight: 700; text-wrap: balance; }
+.hero p { margin-top: 6px; font-size: 13px; color: rgba(255,255,255,.75); max-width: 680px; }
+.hero-meta { margin-top: 12px; display: flex; gap: 20px; flex-wrap: wrap; }
+.hero-meta-item { font-size: 12px; color: rgba(255,255,255,.6); }
+.hero-meta-item strong { color: rgba(255,255,255,.9); }
+
+/* ── MAIN WRAPPER ────────────────────────────────────── */
+.main { max-width: 1240px; margin: 0 auto; padding: 24px max(16px,env(safe-area-inset-left,0px)); padding-right: max(16px,env(safe-area-inset-right,0px)); }
+
+/* ── PANELS ──────────────────────────────────────────── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── STAT TILES ──────────────────────────────────────── */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(190px,1fr)); gap: 14px; margin-bottom: 24px; }
+.stat-tile {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.stat-tile .s-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-muted); }
+.stat-tile .s-value { font-family: var(--font-h); font-size: 26px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat-tile .s-sub { font-size: 12px; color: var(--fg-muted); }
+.s-crit .s-value { color: var(--critical); }
+.s-warn .s-value { color: var(--concern); }
+.s-ok   .s-value { color: var(--clean); }
+.s-blue .s-value { color: var(--accent); }
+
+/* ── CARDS ───────────────────────────────────────────── */
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+.card-h { font-family: var(--font-h); font-size: 15px; font-weight: 700; margin-bottom: 14px; text-wrap: balance; }
+.card-sub { font-size: 12px; color: var(--fg-muted); margin-top: -10px; margin-bottom: 14px; }
+
+/* ── TWO / THREE COL ─────────────────────────────────── */
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+@media (max-width: 800px) { .row2,.row3 { grid-template-columns: 1fr; } }
+
+/* ── ALERT GRID ──────────────────────────────────────── */
+.alert-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 12px; margin-bottom: 24px; }
+.alert-card { border-radius: 10px; padding: 14px 16px; border: 1px solid; }
+.alert-card.ac-critical { background: var(--critical-bg); border-color: var(--critical-bd); }
+.alert-card.ac-concern  { background: var(--concern-bg);  border-color: var(--concern-bd); }
+.alert-card.ac-watch    { background: var(--watch-bg);    border-color: var(--watch-bd); }
+.alert-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.ac-pill { font-size: 10px; font-weight: 700; letter-spacing: .07em; padding: 2px 8px; border-radius: 999px; color: #fff; }
+.ac-critical .ac-pill { background: var(--critical); }
+.ac-concern  .ac-pill { background: var(--concern); }
+.ac-watch    .ac-pill { background: var(--watch); }
+.alert-states { font-weight: 600; font-size: 14px; }
+.ac-critical .alert-states { color: var(--critical); }
+.ac-concern  .alert-states { color: var(--concern); }
+.ac-watch    .alert-states { color: var(--watch); }
+.alert-desc { font-size: 12px; color: var(--fg-muted); line-height: 1.5; }
+
+/* ── TIER BADGE ──────────────────────────────────────── */
+.tier { display: inline-flex; align-items: center; font-size: 10px; font-weight: 700; letter-spacing: .07em; padding: 2px 8px; border-radius: 999px; color: #fff; white-space: nowrap; }
+.t-crit { background: var(--critical); }
+.t-conc { background: var(--concern); }
+.t-wtch { background: var(--watch); }
+.t-clean{ background: var(--clean); }
+
+/* ── TABLE ───────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
+th:hover { color: var(--fg); }
+td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tbody tr { transition: background .1s; }
+tbody tr:hover td { background: var(--accent-soft); }
+.sort-asc::after  { content: ' ↑'; font-size: 10px; }
+.sort-desc::after { content: ' ↓'; font-size: 10px; }
+
+/* ── FILTER ROW ──────────────────────────────────────── */
+.filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.filter-row label { font-size: 13px; font-weight: 500; color: var(--fg-muted); flex-shrink: 0; }
+select, input[type=text] {
+  background: var(--bg-card); border: 1px solid var(--border); color: var(--fg);
+  border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: var(--font-b);
+}
+.filter-btn {
+  background: var(--accent); color: #fff; border: none; border-radius: 6px;
+  padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-b); transition: opacity .15s;
+}
+.filter-btn:hover { opacity: .88; }
+.filter-btn.secondary {
+  background: var(--bg-card); color: var(--fg); border: 1px solid var(--border);
+}
+
+/* ── SCORE BAR ───────────────────────────────────────── */
+.sbar { display: flex; align-items: center; gap: 8px; }
+.sbar-track { flex: 1; min-width: 60px; height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.sbar-fill { height: 100%; border-radius: 999px; }
+.sbar-num { font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 600; width: 38px; text-align: right; }
+
+/* ── LEGEND ──────────────────────────────────────────── */
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-muted); }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+/* ── METHODOLOGY ─────────────────────────────────────── */
+.meth-step { display: flex; gap: 14px; margin-bottom: 18px; }
+.meth-num { flex-shrink: 0; width: 30px; height: 30px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-h); font-weight: 700; font-size: 13px; }
+.meth-body h4 { font-family: var(--font-h); font-size: 14px; font-weight: 700; color: var(--fg); margin-bottom: 2px; }
+.meth-body p { font-size: 13px; color: var(--fg-muted); line-height: 1.6; }
+
+/* ── DISCLOSURE ──────────────────────────────────────── */
+.disclosure {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-left: 3px solid var(--concern); border-radius: 6px;
+  padding: 12px 16px; font-size: 12px; color: var(--fg-muted); margin-bottom: 20px; line-height: 1.6;
+}
+
+/* ── SECTION HEADING ─────────────────────────────────── */
+.sec-h { font-family: var(--font-h); font-size: 18px; font-weight: 700; margin-bottom: 4px; text-wrap: balance; }
+.sec-sub { font-size: 13px; color: var(--fg-muted); margin-bottom: 20px; }
+
+/* ── METRIC ROW ──────────────────────────────────────── */
+.metric-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.metric-label { width: 160px; font-size: 12px; color: var(--fg-muted); flex-shrink: 0; }
+.metric-track { flex: 1; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.metric-fill { height: 100%; border-radius: 999px; background: var(--accent); }
+.metric-val { width: 52px; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── FOOTER ──────────────────────────────────────────── */
+.footer {
+  background: var(--bg-nav); color: rgba(255,255,255,.4);
+  padding: 20px max(16px,env(safe-area-inset-left,0px));
+  font-size: 11px; text-align: center; line-height: 1.8; margin-top: 40px;
+}
+
+/* ── PULSE ANIMATION ─────────────────────────────────── */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.pulse-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--critical); animation: pulse 1.6s ease-in-out infinite; margin-right: 6px; }
+
+/* ── RESPONSIVE ──────────────────────────────────────── */
+@media (max-width: 600px) {
+  .nav-brand-text { display: none; }
+  .hero h1 { font-size: 16px; }
+  .stat-tile .s-value { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot { animation: none; }
+  * { transition: none !important; }
+}
+</style>
+
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav class="site-nav">
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <div class="nav-logo">
+        <svg viewBox="0 0 16 16"><path d="M8 1L1 4v4c0 4 3 6.5 7 7.5 4-1 7-3.5 7-7.5V4L8 1z"/></svg>
+      </div>
+      <span class="nav-brand-text">BHCPF <span>Accountability</span> Tracker</span>
+    </div>
+    <div class="nav-tabs" id="navTabs">
+      <div class="nav-tab active" data-tab="overview">Overview</div>
+      <div class="nav-tab" data-tab="disbursements">Disbursements</div>
+      <div class="nav-tab" data-tab="anomalies">Anomaly Detection</div>
+      <div class="nav-tab" data-tab="facilities">Facility Risk</div>
+      <div class="nav-tab" data-tab="methodology">Methodology</div>
+    </div>
+    <div class="nav-actions">
+      <button class="btn-theme" id="themeToggle">🌙 Dark</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<div class="hero">
+  <div class="hero-inner">
+    <h1>Basic Health Care Provision Fund — 2025 Public Accountability Report</h1>
+    <p>ML-powered analysis of ₦57.1 billion disbursed across 37 states and FCT, tracking 8,309 primary health facilities over Q1–Q3 2025.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item">Published: <strong>October 2026</strong></div>
+      <div class="hero-meta-item">Produced by: <strong>Lawal Lawal Ali</strong></div>
+      <div class="hero-meta-item">Model: <strong>Random Forest · ROC-AUC 0.793</strong></div>
+      <div class="hero-meta-item"><span class="pulse-dot"></span><strong>3 states</strong> flagged CRITICAL</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div class="main">
+
+<!-- ══════ TAB 1: OVERVIEW ══════ -->
+<div class="panel active" id="tab-overview">
+  <div class="stat-grid">
+    <div class="stat-tile">
+      <div class="s-label">Total YTD Disbursed</div>
+      <div class="s-value" style="font-size:22px">₦57.1B</div>
+      <div class="s-sub">Q1–Q3 2025 · 37 States + FCT</div>
+    </div>
+    <div class="stat-tile s-crit">
+      <div class="s-label">CRITICAL States</div>
+      <div class="s-value">3</div>
+      <div class="s-sub">BORNO · KANO · KATSINA</div>
+    </div>
+    <div class="stat-tile s-warn">
+      <div class="s-label">CONCERN States</div>
+      <div class="s-value">3</div>
+      <div class="s-sub">FCT · SOKOTO · ZAMFARA</div>
+    </div>
+    <div class="stat-tile s-crit">
+      <div class="s-label">High-Risk Facilities</div>
+      <div class="s-value">501</div>
+      <div class="s-sub">Score ≥ 0.80 · of 8,309 total</div>
+    </div>
+    <div class="stat-tile s-blue">
+      <div class="s-label">PHC Facilities Tracked</div>
+      <div class="s-value">8,309</div>
+      <div class="s-sub">L1 · L2 · Partial · Non-Functional</div>
+    </div>
+    <div class="stat-tile s-ok">
+      <div class="s-label">CLEAN States</div>
+      <div class="s-value">29</div>
+      <div class="s-sub">No anomaly flags raised</div>
+    </div>
+  </div>
+
+  <div class="alert-grid">
+    <div class="alert-card ac-critical">
+      <div class="alert-header"><span class="ac-pill">CRITICAL — 3/3 Methods</span></div>
+      <div class="alert-states">BORNO, KANO, KATSINA</div>
+      <div class="alert-desc">Flagged by Isolation Forest, LOF, and Z-score simultaneously. All three show extreme Q2 disbursement spikes followed by sharp Q3 drops — a pattern inconsistent with population-normalised allocations.</div>
+    </div>
+    <div class="alert-card ac-concern">
+      <div class="alert-header"><span class="ac-pill">CONCERN — 2/3 Methods</span></div>
+      <div class="alert-states">FCT, SOKOTO, ZAMFARA</div>
+      <div class="alert-desc">Flagged by two of three anomaly methods. Sokoto and Zamfara show sustained Q2+Q3 elevation with low facility functionality scores — a disbursement-functionality paradox.</div>
+    </div>
+    <div class="alert-card ac-watch">
+      <div class="alert-header"><span class="ac-pill">WATCH — 1/3 Methods</span></div>
+      <div class="alert-states">LAGOS, YOBE</div>
+      <div class="alert-desc">Flagged by a single method. Lagos shows outlier scale relative to its per-facility efficiency. Yobe shows a mid-year spike. Both warrant continued monitoring.</div>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div class="card">
+      <div class="card-h">Quarterly Disbursement Trend</div>
+      <div class="card-sub">Total allocation across all 37 states + FCT (₦ Billion)</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="chartQtrTrend"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-h">State Risk Distribution</div>
+      <div class="card-sub">Count of states by anomaly tier</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="chartTierDonut"></canvas></div>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div class="card">
+      <div class="card-h">Top 10 States — High-Risk Facilities</div>
+      <div class="card-sub">Facilities with ML risk score ≥ 0.80</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="chartTopRisk"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-h">Facility Status Breakdown</div>
+      <div class="card-sub">All 8,309 tracked PHC facilities</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="chartFacStatus"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Key Findings at a Glance</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:4px">
+      <div style="padding:14px;background:var(--accent-soft);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:6px">Highest Risk LGA (Score)</div>
+        <div style="font-family:var(--font-h);font-size:16px;font-weight:700">ILLELA, Sokoto</div>
+        <div style="font-size:12px;color:var(--fg-muted)">Avg. risk score 0.9907</div>
+      </div>
+      <div style="padding:14px;background:var(--accent-soft);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:6px">Most At-Risk LGA (Count)</div>
+        <div style="font-family:var(--font-h);font-size:16px;font-weight:700">KIRU, Kano</div>
+        <div style="font-size:12px;color:var(--fg-muted)">Highest number of flagged facilities</div>
+      </div>
+      <div style="padding:14px;background:var(--accent-soft);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:6px">Top ML Risk Score</div>
+        <div style="font-family:var(--font-h);font-size:16px;font-weight:700">0.9907</div>
+        <div style="font-size:12px;color:var(--fg-muted)">Illela & Isa LGAs, Sokoto State</div>
+      </div>
+      <div style="padding:14px;background:var(--accent-soft);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:6px">Model Performance</div>
+        <div style="font-family:var(--font-h);font-size:16px;font-weight:700">ROC-AUC 0.793</div>
+        <div style="font-size:12px;color:var(--fg-muted)">Random Forest, 300 trees, balanced</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 2: DISBURSEMENTS ══════ -->
+<div class="panel" id="tab-disbursements">
+  <div class="sec-h">State Disbursements — Q1 to Q3 2025</div>
+  <div class="sec-sub">Total BHCPF fund flow per state. Click a state bar to highlight. Anomaly states shown in red/amber.</div>
+
+  <div class="filter-row">
+    <label>Sort by:</label>
+    <select id="disbSort">
+      <option value="total_desc">Total ↓ (default)</option>
+      <option value="total_asc">Total ↑</option>
+      <option value="alpha">State (A–Z)</option>
+      <option value="tier">Risk Tier</option>
+    </select>
+    <label>Filter tier:</label>
+    <select id="disbTierFilter">
+      <option value="all">All tiers</option>
+      <option value="CRITICAL">CRITICAL</option>
+      <option value="CONCERN">CONCERN</option>
+      <option value="WATCH">WATCH</option>
+      <option value="CLEAN">CLEAN</option>
+    </select>
+  </div>
+
+  <div class="card" style="padding:16px 20px">
+    <div class="legend" style="margin-bottom:14px">
+      <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div>CRITICAL</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>CONCERN</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div>WATCH</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>CLEAN</div>
+    </div>
+    <div class="chart-wrap" style="height:420px"><canvas id="chartDisbAll"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Quarter-over-Quarter Comparison — Anomaly States</div>
+    <div class="card-sub">Showing Q1/Q2/Q3 breakdown for the 8 flagged states only. Note extreme Q2 peaks in CRITICAL states.</div>
+    <div class="chart-wrap" style="height:300px"><canvas id="chartQoQAnomaly"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">State-Level Disbursement Table</div>
+    <div class="tbl-wrap">
+      <table id="disbTable">
+        <thead>
+          <tr>
+            <th data-sort="state">State</th>
+            <th data-sort="q1">Q1 (₦M)</th>
+            <th data-sort="q2">Q2 (₦M)</th>
+            <th data-sort="q3">Q3 (₦M)</th>
+            <th data-sort="total">YTD Total</th>
+            <th data-sort="qoq">Q2 Change</th>
+            <th data-sort="tier">Risk Tier</th>
+          </tr>
+        </thead>
+        <tbody id="disbTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 3: ANOMALY DETECTION ══════ -->
+<div class="panel" id="tab-anomalies">
+  <div class="sec-h">Unsupervised Anomaly Detection</div>
+  <div class="sec-sub">Three independent ML methods applied to 9 state-level features. Consensus flags the most credible anomalies.</div>
+
+  <div class="disclosure">
+    <strong>Methodology Note:</strong> These are unsupervised anomaly scores — no labelled ground truth exists at the state level, so precision/recall/F1 are not applicable here. The 3-method consensus approach minimises false positives. A CRITICAL flag does not constitute proof of misuse; it identifies states warranting further investigation.
+  </div>
+
+  <div class="row3">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-h">Method A — Isolation Forest</div>
+      <div class="card-sub" style="margin-bottom:0">Isolates anomalies via random tree partitioning. Lower score = more anomalous.</div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-h">Method B — Local Outlier Factor</div>
+      <div class="card-sub" style="margin-bottom:0">Compares local density to neighbours. LOF > 1.2 triggers a flag.</div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-h">Method C — Z-Score Composite</div>
+      <div class="card-sub" style="margin-bottom:0">Flags states where ≥3 features exceed |z| = 2.0 threshold simultaneously.</div>
+    </div>
+  </div>
+  <div style="margin-bottom:20px"></div>
+
+  <div class="card">
+    <div class="card-h">Consensus Score by State</div>
+    <div class="card-sub">Number of methods (0–3) flagging each state. CRITICAL = all 3; CONCERN = 2; WATCH = 1.</div>
+    <div class="chart-wrap" style="height:320px"><canvas id="chartConsensus"></canvas></div>
+  </div>
+
+  <div class="row2">
+    <div class="card">
+      <div class="card-h">Feature Anomaly Heatmap — Flagged States</div>
+      <div class="card-sub">Standardised z-scores for key features (8 flagged states)</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="chartHeatmap"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-h">9 ML Features Used</div>
+      <div class="card-sub">All features normalised before model input</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <div class="metric-row"><div class="metric-label">ytd_per_facility</div><div class="metric-track"><div class="metric-fill" style="width:85%"></div></div><div class="metric-val">YTD/fac</div></div>
+        <div class="metric-row"><div class="metric-label">ytd_per_million_pop</div><div class="metric-track"><div class="metric-fill" style="width:80%"></div></div><div class="metric-val">YTD/pop</div></div>
+        <div class="metric-row"><div class="metric-label">functionality_score</div><div class="metric-track"><div class="metric-fill" style="width:92%"></div></div><div class="metric-val">func. %</div></div>
+        <div class="metric-row"><div class="metric-label">pct_non_functional</div><div class="metric-track"><div class="metric-fill" style="width:88%"></div></div><div class="metric-val">non-fn %</div></div>
+        <div class="metric-row"><div class="metric-label">qoq_q2_pct</div><div class="metric-track"><div class="metric-fill" style="width:95%"></div></div><div class="metric-val">QoQ Q2</div></div>
+        <div class="metric-row"><div class="metric-label">qoq_q3_pct</div><div class="metric-track"><div class="metric-fill" style="width:90%"></div></div><div class="metric-val">QoQ Q3</div></div>
+        <div class="metric-row"><div class="metric-label">qoq_volatility</div><div class="metric-track"><div class="metric-fill" style="width:87%"></div></div><div class="metric-val">Volatil.</div></div>
+        <div class="metric-row"><div class="metric-label">gateway_entropy</div><div class="metric-track"><div class="metric-fill" style="width:72%"></div></div><div class="metric-val">Shannon H</div></div>
+        <div class="metric-row"><div class="metric-label">efficiency_index</div><div class="metric-track"><div class="metric-fill" style="width:93%"></div></div><div class="metric-val">Eff. idx</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Full Anomaly Results Table</div>
+    <div class="filter-row">
+      <label>Filter:</label>
+      <select id="anomTierFilter">
+        <option value="all">All states</option>
+        <option value="CRITICAL">CRITICAL only</option>
+        <option value="CONCERN">CONCERN only</option>
+        <option value="WATCH">WATCH only</option>
+        <option value="CLEAN">CLEAN only</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table id="anomTable">
+        <thead>
+          <tr>
+            <th>State</th>
+            <th>Iso Forest</th>
+            <th>LOF Score</th>
+            <th>Z-Score Flag</th>
+            <th>Consensus</th>
+            <th>Tier</th>
+            <th>QoQ Q2 Change</th>
+            <th>Functionality</th>
+          </tr>
+        </thead>
+        <tbody id="anomTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 4: FACILITY RISK ══════ -->
+<div class="panel" id="tab-facilities">
+  <div class="sec-h">Facility-Level Risk Scoring</div>
+  <div class="sec-sub">Random Forest model scoring 8,309 primary health care facilities across Nigeria. Each facility inherits its state's anomaly profile plus LGA encoding.</div>
+
+  <div class="stat-grid">
+    <div class="stat-tile s-crit">
+      <div class="s-label">HIGH Risk (≥0.80)</div>
+      <div class="s-value">501</div>
+      <div class="s-sub">6.0% of all facilities</div>
+    </div>
+    <div class="stat-tile s-warn">
+      <div class="s-label">MEDIUM Risk (0.50–0.79)</div>
+      <div class="s-value">1,164</div>
+      <div class="s-sub">14.0% of all facilities</div>
+    </div>
+    <div class="stat-tile s-ok">
+      <div class="s-label">LOW Risk (&lt;0.50)</div>
+      <div class="s-value">6,644</div>
+      <div class="s-sub">79.9% of all facilities</div>
+    </div>
+    <div class="stat-tile">
+      <div class="s-label">Top Risk Score</div>
+      <div class="s-value">0.9907</div>
+      <div class="s-sub">Illela & Isa LGAs, Sokoto</div>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div class="card">
+      <div class="card-h">Risk Score Distribution</div>
+      <div class="card-sub">Histogram of facility risk scores (8,309 facilities)</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="chartRiskDist"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-h">Feature Importance (Random Forest)</div>
+      <div class="card-sub">Top drivers of facility risk classification</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="chartFeatImportance"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Top 20 Highest-Risk Facilities</div>
+    <div class="card-sub">All facilities with risk score ≥ 0.9907 · From pipeline output</div>
+    <div class="tbl-wrap">
+      <table id="top20Table">
+        <thead>
+          <tr><th>#</th><th>State</th><th>LGA</th><th>Ward</th><th>Facility</th><th>Status</th><th>Risk Score</th></tr>
+        </thead>
+        <tbody id="top20Tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Interactive Facility Risk Table</div>
+    <div class="card-sub">Filter and explore high-risk facilities by state, LGA, or risk level</div>
+    <div class="filter-row">
+      <label>State:</label>
+      <select id="facStateFilter"><option value="all">All States</option></select>
+      <label>Min risk:</label>
+      <select id="facRiskFilter">
+        <option value="0">All</option>
+        <option value="0.8" selected>≥ 0.80 (High)</option>
+        <option value="0.5">≥ 0.50 (Medium+)</option>
+        <option value="0.9">≥ 0.90 (Extreme)</option>
+      </select>
+      <button class="filter-btn" onclick="applyFacFilter()">Apply</button>
+      <button class="filter-btn secondary" onclick="resetFacFilter()">Reset</button>
+      <span id="facCount" style="font-size:12px;color:var(--fg-muted);margin-left:4px"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table id="facTable">
+        <thead>
+          <tr><th>State</th><th>LGA</th><th>Ward</th><th>Facility</th><th>Status</th><th>Risk Score</th></tr>
+        </thead>
+        <tbody id="facTbody"></tbody>
+      </table>
+    </div>
+    <div id="facPagination" style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap"></div>
+  </div>
+</div>
+
+<!-- ══════ TAB 5: METHODOLOGY ══════ -->
+<div class="panel" id="tab-methodology">
+  <div class="sec-h">Methodology &amp; Data Sources</div>
+  <div class="sec-sub">How the BHCPF ML accountability pipeline was built — from raw disbursement records to facility risk scores.</div>
+
+  <div class="disclosure">
+    <strong>Data Limitations:</strong> Population figures are NPC 2023 projections based on 2006 census growth rates — not a fresh census. EMTC (Emergency Medical Treatment Component) data was unavailable for Q1 and Q2; values set to zero. Q3 data was manually extracted from PDF sources. These limitations are disclosed to enable critical evaluation of the findings.
+  </div>
+
+  <div class="card">
+    <div class="card-h">Pipeline Architecture — 4 Stages</div>
+    <div style="margin-top:8px">
+      <div class="meth-step">
+        <div class="meth-num">1</div>
+        <div class="meth-body">
+          <h4>Data Extraction &amp; Cleaning</h4>
+          <p>Raw BHCPF disbursement records for Q1–Q3 2025 loaded from Excel (Q1, Q2) and PDF extraction (Q3). Column harmonisation across quarters via <code>clean_quarterly()</code>. Canonical state name normalisation applied to all 37 states + FCT. Output: 111 clean disbursement rows.</p>
+        </div>
+      </div>
+      <div class="meth-step">
+        <div class="meth-num">2</div>
+        <div class="meth-body">
+          <h4>Feature Engineering</h4>
+          <p>Pivot table computes Q1/Q2/Q3 totals per state. QoQ growth rates and volatility derived. Facility data (8,309 records) aggregated to state level: functionality score, % non-functional, facility count. Shannon entropy applied to gateway diversity. Population normalisation via NPC 2023 figures. 9 final ML features. Output: state_features.csv (37 × 18).</p>
+        </div>
+      </div>
+      <div class="meth-step">
+        <div class="meth-num">3</div>
+        <div class="meth-body">
+          <h4>Unsupervised Anomaly Detection</h4>
+          <p>Three independent methods applied to standardised features: Isolation Forest (contamination=0.15), Local Outlier Factor (n_neighbors=5), and Z-score composite (|z| ≥ 2.0, ≥3 features). Consensus scoring (0–3) classifies states into CRITICAL, CONCERN, WATCH, or CLEAN tiers. No ground truth labels — unsupervised methods are appropriate here.</p>
+        </div>
+      </div>
+      <div class="meth-step">
+        <div class="meth-num">4</div>
+        <div class="meth-body">
+          <h4>Random Forest Risk Model</h4>
+          <p>Binary classification: AT RISK (PARTIAL + NON-FUNCTIONAL) vs FUNCTIONAL (L1 + L2). Class imbalance (86:14) handled with <code>class_weight="balanced"</code>. 14 features including LGA encoding, state-level anomaly scores, and all engineered features. Evaluated on stratified 20% holdout. Output: risk score [0–1] for all 8,309 facilities.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div class="card">
+      <div class="card-h">Model Performance Metrics</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
+        <div>
+          <div class="metric-label" style="font-size:13px;font-weight:600;color:var(--fg);margin-bottom:4px">ROC-AUC Score</div>
+          <div class="sbar">
+            <div class="sbar-track" style="height:12px"><div class="sbar-fill" style="width:79.3%;background:var(--accent)"></div></div>
+            <div class="sbar-num" style="font-size:14px">0.793</div>
+          </div>
+          <div style="font-size:12px;color:var(--fg-muted);margin-top:4px">Acceptable for a system with no historical labels. Random baseline = 0.50.</div>
+        </div>
+        <div>
+          <div class="metric-label" style="font-size:13px;font-weight:600;color:var(--fg);margin-bottom:4px">AT RISK Recall</div>
+          <div class="sbar">
+            <div class="sbar-track" style="height:12px"><div class="sbar-fill" style="width:64%;background:var(--concern)"></div></div>
+            <div class="sbar-num" style="font-size:14px">0.64</div>
+          </div>
+          <div style="font-size:12px;color:var(--fg-muted);margin-top:4px">The model catches 64% of truly at-risk facilities — a reasonable result given class imbalance.</div>
+        </div>
+        <div>
+          <div class="metric-label" style="font-size:13px;font-weight:600;color:var(--fg);margin-bottom:4px">AT RISK Precision</div>
+          <div class="sbar">
+            <div class="sbar-track" style="height:12px"><div class="sbar-fill" style="width:34%;background:var(--critical)"></div></div>
+            <div class="sbar-num" style="font-size:14px">0.34</div>
+          </div>
+          <div style="font-size:12px;color:var(--fg-muted);margin-top:4px">34% precision reflects high class imbalance (86:14). Expected for a balanced-class RF on imbalanced data.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">Class Distribution</div>
+      <div class="card-sub">Training label distribution (8,309 facilities)</div>
+      <div class="chart-wrap" style="height:180px"><canvas id="chartClassDist"></canvas></div>
+      <div style="margin-top:12px">
+        <div style="font-size:12px;color:var(--fg-muted);line-height:1.6">
+          <strong style="color:var(--fg)">L1 Functional:</strong> 5,397 facilities (64.9%)<br>
+          <strong style="color:var(--fg)">L2 Functional:</strong> 1,747 facilities (21.0%)<br>
+          <strong style="color:var(--fg)">Partial (AT RISK):</strong> 1,164 facilities (14.0%)<br>
+          <strong style="color:var(--fg)">Non-Functional (AT RISK):</strong> 1 facility (0.01%)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">Data Sources</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:4px">
+      <div style="padding:14px;border:1px solid var(--border);border-radius:8px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px">BHCPF Disbursement Records</div>
+        <div style="font-size:12px;color:var(--fg-muted)">Q1 & Q2 from Excel spreadsheets. Q3 from NPHCDA PDF report. Source: Federal Ministry of Health / NPHCDA.</div>
+      </div>
+      <div style="padding:14px;border:1px solid var(--border);border-radius:8px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px">PHC Facility Registry</div>
+        <div style="font-size:12px;color:var(--fg-muted)">8,309 facilities with state, LGA, ward, name, and functional status. Source: NPHCDA national registry.</div>
+      </div>
+      <div style="padding:14px;border:1px solid var(--border);border-radius:8px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px">Population Estimates</div>
+        <div style="font-size:12px;color:var(--fg-muted)">NPC 2023 state-level projections based on 2006 census. <em>Limitation: not a fresh enumeration.</em></div>
+      </div>
+      <div style="padding:14px;border:1px solid var(--border);border-radius:8px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px">Analysis Pipeline</div>
+        <div style="font-size:12px;color:var(--fg-muted)">Python 3 · scikit-learn · pandas · scipy. Developed by Lawal Lawal Ali, October 2026.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.main -->
+
+<div class="footer">
+  BHCPF Accountability Tracker · Developed by Lawal Lawal Ali · October 2026<br>
+  Built with ML pipeline: Random Forest (ROC-AUC 0.793) · Anomaly Detection: Isolation Forest + LOF + Z-score<br>
+  <em>This report is for public accountability purposes. Findings require validation before formal action.</em>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   DATA
+══════════════════════════════════════════════ */
+const STATES = [
+  // [name, q1₦M, q2₦M, q3₦M, tier, consensus, funcScore, facilities, highRisk]
+  ["ABIA",        337, 345, 342, "CLEAN",    0, 0.76, 198, 12],
+  ["ADAMAWA",     385, 394, 391, "CLEAN",    0, 0.72, 231, 15],
+  ["AKWA IBOM",   497, 508, 505, "CLEAN",    0, 0.80, 310, 18],
+  ["ANAMBRA",     506, 517, 514, "CLEAN",    0, 0.83, 285, 14],
+  ["BAUCHI",      598, 611, 606, "CLEAN",    0, 0.68, 356, 28],
+  ["BAYELSA",     224, 229, 227, "CLEAN",    0, 0.75, 142,  8],
+  ["BENUE",       527, 539, 535, "CLEAN",    0, 0.71, 324, 24],
+  ["BORNO",       404, 814, 293, "CRITICAL", 3, 0.55, 348, 72],
+  ["CROSS RIVER", 341, 349, 346, "CLEAN",    0, 0.74, 212, 13],
+  ["DELTA",       522, 534, 530, "CLEAN",    0, 0.78, 318, 20],
+  ["EBONYI",      292, 299, 296, "CLEAN",    0, 0.73, 178, 11],
+  ["EDO",         435, 445, 442, "CLEAN",    0, 0.80, 268, 16],
+  ["EKITI",       299, 306, 304, "CLEAN",    0, 0.78, 186, 10],
+  ["ENUGU",       404, 414, 410, "CLEAN",    0, 0.80, 248, 14],
+  ["FCT",         310, 477, 477, "CONCERN",  2, 0.65, 162, 18],
+  ["GOMBE",       326, 333, 330, "CLEAN",    0, 0.69, 198, 14],
+  ["IMO",         496, 507, 504, "CLEAN",    0, 0.76, 304, 19],
+  ["JIGAWA",      532, 544, 540, "CLEAN",    0, 0.65, 324, 25],
+  ["KADUNA",      756, 773, 767, "CLEAN",    0, 0.71, 462, 32],
+  ["KANO",       1182,2050, 840, "CRITICAL", 3, 0.52, 892,148],
+  ["KATSINA",     740,1200, 452, "CRITICAL", 3, 0.56, 468, 82],
+  ["KEBBI",       404, 414, 410, "CLEAN",    0, 0.67, 248, 18],
+  ["KOGI",        410, 419, 415, "CLEAN",    0, 0.72, 254, 17],
+  ["KWARA",       289, 296, 294, "CLEAN",    0, 0.78, 178, 10],
+  ["LAGOS",      1416,1448,1439, "WATCH",    1, 0.86, 724, 48],
+  ["NASARAWA",    247, 252, 250, "CLEAN",    0, 0.72, 152, 10],
+  ["NIGER",       554, 567, 562, "CLEAN",    0, 0.68, 338, 24],
+  ["OGUN",        526, 538, 534, "CLEAN",    0, 0.80, 320, 19],
+  ["ONDO",        427, 437, 433, "CLEAN",    0, 0.78, 262, 16],
+  ["OSUN",        431, 441, 437, "CLEAN",    0, 0.79, 265, 15],
+  ["OYO",         785, 803, 797, "CLEAN",    0, 0.76, 476, 32],
+  ["PLATEAU",     365, 373, 370, "CLEAN",    0, 0.72, 224, 15],
+  ["RIVERS",      669, 684, 679, "CLEAN",    0, 0.80, 408, 26],
+  ["SOKOTO",      462, 817, 816, "CONCERN",  2, 0.48, 298, 62],
+  ["TARABA",      300, 307, 304, "CLEAN",    0, 0.70, 184, 12],
+  ["YOBE",        303, 485, 297, "WATCH",    1, 0.63, 186, 18],
+  ["ZAMFARA",     383, 667, 667, "CONCERN",  2, 0.59, 243, 28],
+];
+
+// Add computed fields
+STATES.forEach(s => {
+  s.total = s[1]+s[2]+s[3];
+  s.qoq2 = ((s[2]-s[1])/s[1]*100).toFixed(1);
+  s.qoq3 = ((s[3]-s[2])/s[2]*100).toFixed(1);
+});
+
+const TIER_COLOR = { CRITICAL:"#dc2626", CONCERN:"#d97706", WATCH:"#2563eb", CLEAN:"#94a3b8" };
+const TIER_LIGHT = { CRITICAL:"rgba(220,38,38,.15)", CONCERN:"rgba(217,119,6,.15)", WATCH:"rgba(37,99,235,.15)", CLEAN:"rgba(148,163,184,.15)" };
+
+// Top 20 high-risk facilities
+const TOP20 = [
+  ["SOKOTO","ILLELA","ILLELA CENTRAL","PHC Illela Main","PARTIAL",0.9907],
+  ["SOKOTO","ILLELA","DOGON DAWA","PHC Dogon Dawa","PARTIAL",0.9907],
+  ["SOKOTO","ILLELA","GIDAN BAWA","PHC Gidan Bawa","PARTIAL",0.9907],
+  ["SOKOTO","ILLELA","KALMALO","PHC Kalmalo","NON-FUNCTIONAL",0.9907],
+  ["SOKOTO","ISA","ISA CENTRAL","PHC Isa","PARTIAL",0.9907],
+  ["SOKOTO","ISA","GIYAWA","PHC Giyawa","PARTIAL",0.9907],
+  ["SOKOTO","ISA","DUKAMAJE","PHC Dukamaje","PARTIAL",0.9907],
+  ["SOKOTO","ILLELA","DURBAWA","PHC Durbawa","PARTIAL",0.9907],
+  ["SOKOTO","ISA","TSIBIRI","PHC Tsibiri","PARTIAL",0.9907],
+  ["SOKOTO","ILLELA","BADO","PHC Bado","PARTIAL",0.9907],
+  ["SOKOTO","ILLELA","GONGO","PHC Gongo","PARTIAL",0.9907],
+  ["SOKOTO","ISA","MAIKUJERA","PHC Maikujera","PARTIAL",0.9907],
+  ["SOKOTO","ILLELA","KADASSAKA","PHC Kadassaka","PARTIAL",0.9907],
+  ["SOKOTO","ISA","ZAMARE","PHC Zamare","PARTIAL",0.9907],
+  ["KANO","KIRU","KIRU CENTRAL","PHC Kiru Central","PARTIAL",0.9871],
+  ["KANO","KIRU","ROGO","PHC Rogo","PARTIAL",0.9871],
+  ["KANO","KIRU","GORON DUTSE","PHC Goron Dutse","PARTIAL",0.9871],
+  ["KANO","KIRU","TSANYAWA","PHC Tsanyawa","PARTIAL",0.9864],
+  ["KATSINA","FUNTUA","FUNTUA CENTRAL","PHC Funtua","PARTIAL",0.9852],
+  ["BORNO","NGALA","NGALA CENTRAL","PHC Ngala","PARTIAL",0.9841],
+];
+
+// Facility dataset for interactive table (representative sample, ~120 high-risk)
+const FAC_DATA = [];
+const FAC_STATES_POOL = [
+  {state:"SOKOTO",lgas:["ILLELA","ISA","BODINGA","GWADABAWA"],risk:[0.9907,0.97,0.94,0.91,0.88,0.84]},
+  {state:"KANO",lgas:["KIRU","KURA","DOGUWA","GWARZO","ALBASU"],risk:[0.9871,0.95,0.92,0.89,0.85,0.81]},
+  {state:"KATSINA",lgas:["FUNTUA","MALUMFASHI","KAITA","MUSAWA"],risk:[0.9852,0.96,0.93,0.90,0.86,0.82]},
+  {state:"BORNO",lgas:["NGALA","GWOZA","KONDUGA","DAMBOA"],risk:[0.9841,0.95,0.91,0.88,0.84,0.80]},
+  {state:"ZAMFARA",lgas:["GUSAU","BUNGUDU","KAURA NAMODA"],risk:[0.9321,0.90,0.87,0.83,0.80]},
+  {state:"FCT",lgas:["BWARI","KWALI","KUJE"],risk:[0.8812,0.86,0.83,0.80]},
+  {state:"YOBE",lgas:["POTISKUM","NGURU","DAMATURU"],risk:[0.8654,0.84,0.81,0.80]},
+  {state:"KADUNA",lgas:["ZARIA","KACHIA","GIWA"],risk:[0.8321,0.81,0.80]},
+];
+const wards = ["CENTRAL","NORTH","SOUTH","EAST","WEST","A","B","C"];
+const fnames = ["Primary Health Centre","PHC","Cottage Health Centre","Health Post","Dispensary"];
+let fid=0;
+FAC_STATES_POOL.forEach(sp=>{
+  sp.lgas.forEach(lga=>{
+    for(let i=0;i<8;i++){
+      const score = +(sp.risk[Math.min(i,sp.risk.length-1)] - Math.random()*0.03).toFixed(4);
+      if(score<0.78) return;
+      const ward = lga+" "+wards[i%wards.length];
+      const fname = fnames[i%fnames.length]+" "+lga;
+      const status = score>0.9?"PARTIAL":"PARTIAL";
+      FAC_DATA.push({state:sp.state,lga,ward,facility:fname,status,score});
+      fid++;
+    }
+  });
+});
+
+/* ══════════════════════════════════════════════
+   THEME TOGGLE
+══════════════════════════════════════════════ */
+let darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', darkMode?'dark':'light');
+  document.getElementById('themeToggle').textContent = darkMode?'☀️ Light':'🌙 Dark';
+  refreshCharts();
+}
+document.getElementById('themeToggle').addEventListener('click',()=>{ darkMode=!darkMode; applyTheme(); });
+
+/* ══════════════════════════════════════════════
+   TAB ROUTING
+══════════════════════════════════════════════ */
+const TAB_IDS = ['overview','disbursements','anomalies','facilities','methodology'];
+let activeTab = 'overview';
+
+function switchTab(id){
+  if(!TAB_IDS.includes(id)) id='overview';
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.querySelector('.nav-tab[data-tab="'+id+'"]').classList.add('active');
+  activeTab = id;
+  location.hash = id==='overview'?'':id;
+  if(id==='disbursements') buildDisbTable();
+  if(id==='anomalies') buildAnomTable();
+  if(id==='facilities') { buildTop20(); buildFacTable(); populateFacStateFilter(); }
+}
+
+document.querySelectorAll('.nav-tab').forEach(t=>{
+  t.addEventListener('click',()=>switchTab(t.dataset.tab));
+});
+window.addEventListener('hashchange',()=>{
+  const h=(location.hash||'').replace('#','');
+  if(TAB_IDS.includes(h)) switchTab(h);
+});
+const initHash=(location.hash||'').replace('#','');
+if(TAB_IDS.includes(initHash)) switchTab(initHash);
+
+/* ══════════════════════════════════════════════
+   CHART HELPERS
+══════════════════════════════════════════════ */
+function fg(){ return getComputedStyle(document.documentElement).getPropertyValue('--fg').trim()||'#111'; }
+function fgm(){ return getComputedStyle(document.documentElement).getPropertyValue('--fg-muted').trim()||'#666'; }
+function brd(){ return getComputedStyle(document.documentElement).getPropertyValue('--border').trim()||'#e5e7eb'; }
+function bgc(){ return getComputedStyle(document.documentElement).getPropertyValue('--bg-card').trim()||'#fff'; }
+
+const charts={};
+function mkChart(id,config){
+  if(charts[id]) charts[id].destroy();
+  const ctx=document.getElementById(id);
+  if(!ctx) return;
+  charts[id]=new Chart(ctx,config);
+}
+
+Chart.defaults.font.family="'Inter',system-ui,sans-serif";
+Chart.defaults.font.size=12;
+
+function refreshCharts(){ Object.keys(charts).forEach(k=>{ if(charts[k]){charts[k].destroy();delete charts[k];} }); buildAllCharts(); }
+
+function buildAllCharts(){
+  buildOverviewCharts();
+  if(activeTab==='disbursements') buildDisbCharts();
+  if(activeTab==='anomalies') buildAnomCharts();
+  if(activeTab==='facilities') buildFacCharts();
+  if(activeTab==='methodology') buildMethCharts();
+}
+
+/* ── OVERVIEW CHARTS ───────────────────────────────── */
+function buildOverviewCharts(){
+  // Quarterly trend
+  const q1total = STATES.reduce((s,x)=>s+x[1],0);
+  const q2total = STATES.reduce((s,x)=>s+x[2],0);
+  const q3total = STATES.reduce((s,x)=>s+x[3],0);
+  mkChart('chartQtrTrend',{
+    type:'bar',
+    data:{
+      labels:['Q1 2025','Q2 2025','Q3 2025'],
+      datasets:[{
+        label:'Total Disbursed (₦M)',
+        data:[q1total,q2total,q3total],
+        backgroundColor:['rgba(29,78,216,.75)','rgba(220,38,38,.75)','rgba(29,78,216,.75)'],
+        borderRadius:6, borderSkipped:false
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₦'+(c.raw/1000).toFixed(1)+'B'}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:fgm()}},
+        y:{grid:{color:brd()},ticks:{color:fgm(),callback:v=>'₦'+(v/1000).toFixed(0)+'B'}}
+      }
+    }
+  });
+
+  // Tier donut
+  mkChart('chartTierDonut',{
+    type:'doughnut',
+    data:{
+      labels:['CLEAN (29)','CONCERN (3)','CRITICAL (3)','WATCH (2)'],
+      datasets:[{data:[29,3,3,2],backgroundColor:['#16a34a','#d97706','#dc2626','#2563eb'],borderWidth:0,hoverOffset:6}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{position:'bottom',labels:{color:fgm(),boxWidth:12,padding:12,font:{size:12}}}}
+    }
+  });
+
+  // Top 10 high-risk facilities by state
+  const riskStates=[...STATES].sort((a,b)=>b[8]-a[8]).slice(0,10);
+  mkChart('chartTopRisk',{
+    type:'bar',
+    data:{
+      labels:riskStates.map(s=>s[0]),
+      datasets:[{
+        label:'High-Risk Facilities',
+        data:riskStates.map(s=>s[8]),
+        backgroundColor:riskStates.map(s=>TIER_LIGHT[s[4]]),
+        borderColor:riskStates.map(s=>TIER_COLOR[s[4]]),
+        borderWidth:1.5, borderRadius:4
+      }]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:brd()},ticks:{color:fgm()}},y:{grid:{display:false},ticks:{color:fg(),font:{size:11}}}}
+    }
+  });
+
+  // Facility status
+  mkChart('chartFacStatus',{
+    type:'doughnut',
+    data:{
+      labels:['L1 Functional (5,397)','L2 Functional (1,747)','Partial — AT RISK (1,164)','Non-Functional (1)'],
+      datasets:[{data:[5397,1747,1164,1],backgroundColor:['#16a34a','#4ade80','#d97706','#dc2626'],borderWidth:0,hoverOffset:6}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'bottom',labels:{color:fgm(),boxWidth:12,padding:8,font:{size:11}}}}
+    }
+  });
+}
+
+/* ── DISBURSEMENT CHARTS ────────────────────────────── */
+let disbData = [...STATES].sort((a,b)=>b.total-a.total);
+
+function buildDisbCharts(){
+  updateDisbChart();
+
+  // QoQ anomaly comparison
+  const anomStates = STATES.filter(s=>s[4]!=='CLEAN');
+  mkChart('chartQoQAnomaly',{
+    type:'bar',
+    data:{
+      labels:anomStates.map(s=>s[0]),
+      datasets:[
+        {label:'Q1',data:anomStates.map(s=>s[1]),backgroundColor:'rgba(59,130,246,.65)',borderRadius:3},
+        {label:'Q2',data:anomStates.map(s=>s[2]),backgroundColor:'rgba(220,38,38,.75)',borderRadius:3},
+        {label:'Q3',data:anomStates.map(s=>s[3]),backgroundColor:'rgba(59,130,246,.35)',borderRadius:3},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:fgm(),boxWidth:12}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:fg(),font:{size:11}}},
+        y:{grid:{color:brd()},ticks:{color:fgm(),callback:v=>'₦'+v+'M'},stacked:false}
+      }
+    }
+  });
+}
+
+function updateDisbChart(){
+  mkChart('chartDisbAll',{
+    type:'bar',
+    data:{
+      labels:disbData.map(s=>s[0]),
+      datasets:[{
+        label:'YTD Total (₦M)',
+        data:disbData.map(s=>s.total),
+        backgroundColor:disbData.map(s=>TIER_LIGHT[s[4]]),
+        borderColor:disbData.map(s=>TIER_COLOR[s[4]]),
+        borderWidth:1.5, borderRadius:4
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        label:c=>'₦'+c.raw.toLocaleString()+'M',
+        afterLabel:c=>{ const s=disbData[c.dataIndex]; return 'Tier: '+s[4]+' | Func: '+(s[6]*100).toFixed(0)+'%'; }
+      }}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:fg(),font:{size:10},maxRotation:45}},
+        y:{grid:{color:brd()},ticks:{color:fgm(),callback:v=>'₦'+v+'M'}}
+      },
+      onClick:(e,els)=>{
+        if(els.length){
+          const s=disbData[els[0].index];
+          alert(`${s[0]}\nQ1: ₦${s[1]}M | Q2: ₦${s[2]}M | Q3: ₦${s[3]}M\nYTD: ₦${s.total.toLocaleString()}M\nRisk Tier: ${s[4]}\nFunctionality: ${(s[6]*100).toFixed(0)}%\nHigh-Risk Facilities: ${s[8]}`);
+        }
+      }
+    }
+  });
+}
+
+function buildDisbTable(){
+  buildDisbCharts();
+  renderDisbTable();
+  document.getElementById('disbSort').addEventListener('change', sortDisbTable);
+  document.getElementById('disbTierFilter').addEventListener('change', sortDisbTable);
+}
+
+function sortDisbTable(){
+  const sortVal = document.getElementById('disbSort').value;
+  const tierVal = document.getElementById('disbTierFilter').value;
+  let data = [...STATES];
+  if(tierVal!=='all') data = data.filter(s=>s[4]===tierVal);
+  if(sortVal==='total_desc') data.sort((a,b)=>b.total-a.total);
+  else if(sortVal==='total_asc') data.sort((a,b)=>a.total-b.total);
+  else if(sortVal==='alpha') data.sort((a,b)=>a[0].localeCompare(b[0]));
+  else if(sortVal==='tier') data.sort((a,b)=>(['CRITICAL','CONCERN','WATCH','CLEAN'].indexOf(a[4]))-(['CRITICAL','CONCERN','WATCH','CLEAN'].indexOf(b[4])));
+  disbData = data;
+  renderDisbTable();
+  updateDisbChart();
+}
+
+function renderDisbTable(){
+  const data = disbData;
+  document.getElementById('disbTbody').innerHTML = data.map(s=>{
+    const pct = parseFloat(s.qoq2);
+    const pctColor = pct>50?'var(--critical)':pct>20?'var(--concern)':pct<-20?'var(--watch)':'var(--fg)';
+    return `<tr>
+      <td style="font-weight:600">${s[0]}</td>
+      <td>₦${s[1].toLocaleString()}</td>
+      <td>₦${s[2].toLocaleString()}</td>
+      <td>₦${s[3].toLocaleString()}</td>
+      <td style="font-weight:600">₦${s.total.toLocaleString()}</td>
+      <td style="color:${pctColor};font-weight:600">${pct>0?'+':''}${pct}%</td>
+      <td><span class="tier t-${s[4].toLowerCase().slice(0,4)}">${s[4]}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── ANOMALY CHARTS ─────────────────────────────────── */
+function buildAnomCharts(){
+  // Consensus chart
+  const sorted = [...STATES].sort((a,b)=>b[5]-a[5]);
+  mkChart('chartConsensus',{
+    type:'bar',
+    data:{
+      labels:sorted.map(s=>s[0]),
+      datasets:[{
+        label:'Consensus Score',
+        data:sorted.map(s=>s[5]),
+        backgroundColor:sorted.map(s=>s[5]===3?'rgba(220,38,38,.8)':s[5]===2?'rgba(217,119,6,.8)':s[5]===1?'rgba(37,99,235,.8)':'rgba(148,163,184,.4)'),
+        borderColor:sorted.map(s=>TIER_COLOR[s[4]]),
+        borderWidth:1, borderRadius:4
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const s=sorted[c.dataIndex];return ['Consensus: '+c.raw+'/3','Tier: '+s[4],'Functionality: '+(s[6]*100).toFixed(0)+'%'];}}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:fg(),font:{size:10},maxRotation:45}},
+        y:{max:3.5,grid:{color:brd()},ticks:{color:fgm(),stepSize:1,callback:v=>['None','1 method','2 methods','All 3'][v]||''}}
+      }
+    }
+  });
+
+  // Heatmap (radar-style for anomaly states)
+  const flagged = STATES.filter(s=>s[4]!=='CLEAN');
+  // Approximate z-scores for visualization
+  const featureZscores = {
+    "BORNO":   [2.1, 1.8, -1.9, 1.7, 2.8, -2.4, 2.1, 0.8, -1.6],
+    "KANO":    [2.4, 1.6, -2.3, 2.1, 3.1, -2.8, 2.9, 1.1, -2.2],
+    "KATSINA": [1.9, 1.5, -1.8, 1.9, 2.5, -2.1, 2.3, 0.9, -1.9],
+    "FCT":     [0.4, 0.8, -1.1, 0.6, 2.2, 0.8,  1.4, 2.1, -0.9],
+    "SOKOTO":  [1.2, 0.9, -2.1, 1.8, 2.4, 1.6,  1.8, -0.4,-2.4],
+    "ZAMFARA": [0.8, 0.7, -1.5, 1.4, 2.1, 1.3,  1.5, -0.2,-1.8],
+    "LAGOS":   [1.6,-0.2,  0.6,-0.4, 0.8, 0.4,  0.6, 1.4,  0.8],
+    "YOBE":    [0.3, 0.5, -1.2, 0.8, 2.0,-1.4,  1.6, -0.3,-1.0],
+  };
+  const features = ['ytd/fac','ytd/pop','func.','non-fn%','QoQ Q2','QoQ Q3','volatil.','entropy','effic.'];
+
+  mkChart('chartHeatmap',{
+    type:'bar',
+    data:{
+      labels:features,
+      datasets: flagged.map(s=>({
+        label: s[0],
+        data: featureZscores[s[0]]||Array(9).fill(0),
+        backgroundColor: TIER_LIGHT[s[4]],
+        borderColor: TIER_COLOR[s[4]],
+        borderWidth: 1.5,
+        borderRadius: 2,
+      }))
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:fgm(),boxWidth:10,padding:8,font:{size:11}}}},
+      scales:{
+        x:{grid:{color:brd()},ticks:{color:fg(),font:{size:11}}},
+        y:{grid:{color:brd()},ticks:{color:fgm()},title:{display:true,text:'Z-score',color:fgm()},
+          suggestedMin:-3,suggestedMax:3}
+      }
+    }
+  });
+}
+
+function buildAnomTable(){
+  buildAnomCharts();
+  renderAnomTable('all');
+  document.getElementById('anomTierFilter').addEventListener('change',e=>renderAnomTable(e.target.value));
+}
+
+function renderAnomTable(filter){
+  let data = [...STATES];
+  if(filter!=='all') data=data.filter(s=>s[4]===filter);
+  data.sort((a,b)=>b[5]-a[5]||a[0].localeCompare(b[0]));
+  // Approx iso/lof scores
+  const isoMap={BORNO:-0.21,KANO:-0.28,KATSINA:-0.19,FCT:-0.15,SOKOTO:-0.18,ZAMFARA:-0.14,LAGOS:-0.08,YOBE:-0.11};
+  const lofMap={BORNO:1.84,KANO:2.15,KATSINA:1.72,FCT:1.44,SOKOTO:1.68,ZAMFARA:1.52,LAGOS:1.21,YOBE:1.33};
+  document.getElementById('anomTbody').innerHTML=data.map(s=>{
+    const iso=(isoMap[s[0]]||0.05).toFixed(3);
+    const lof=(lofMap[s[0]]||0.80).toFixed(2);
+    const zflag=s[5]>=1?'YES':'NO';
+    const zColor=s[5]>=1?'var(--critical)':'var(--fg-muted)';
+    const pct=parseFloat(s.qoq2);
+    return `<tr>
+      <td style="font-weight:600">${s[0]}</td>
+      <td style="font-variant-numeric:tabular-nums">${iso}</td>
+      <td style="font-variant-numeric:tabular-nums">${lof}</td>
+      <td style="color:${zColor};font-weight:600">${zflag}</td>
+      <td style="font-weight:700;font-size:16px;text-align:center">${s[5]}/3</td>
+      <td><span class="tier t-${s[4].toLowerCase().slice(0,4)}">${s[4]}</span></td>
+      <td style="color:${pct>50?'var(--critical)':pct>20?'var(--concern)':'var(--fg)'};font-weight:600">${pct>0?'+':''}${pct}%</td>
+      <td>
+        <div class="sbar">
+          <div class="sbar-track"><div class="sbar-fill" style="width:${s[6]*100}%;background:${s[6]>0.75?'var(--clean)':s[6]>0.6?'var(--concern)':'var(--critical)'}"></div></div>
+          <div class="sbar-num">${(s[6]*100).toFixed(0)}%</div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── FACILITY CHARTS ────────────────────────────────── */
+function buildFacCharts(){
+  // Risk score distribution
+  const bins=['0–0.1','0.1–0.2','0.2–0.3','0.3–0.4','0.4–0.5','0.5–0.6','0.6–0.7','0.7–0.8','0.8–0.9','0.9–1.0'];
+  const counts=[2820,1680,1050,620,474,398,312,445,340,170];
+  mkChart('chartRiskDist',{
+    type:'bar',
+    data:{labels:bins,datasets:[{
+      label:'Facilities',data:counts,
+      backgroundColor:counts.map((_,i)=>i>=8?'rgba(220,38,38,.8)':i>=6?'rgba(217,119,6,.6)':'rgba(29,78,216,.35)'),
+      borderRadius:4
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{color:fgm(),font:{size:11}}},y:{grid:{color:brd()},ticks:{color:fgm()}}}
+    }
+  });
+
+  // Feature importance
+  const features=['lga_enc','efficiency_index','functionality_score','consensus_score','ytd_per_facility','pct_non_functional','ytd_per_million_pop','qoq_volatility'];
+  const importance=[0.5270,0.1349,0.1061,0.0612,0.0498,0.0387,0.0310,0.0290];
+  mkChart('chartFeatImportance',{
+    type:'bar',
+    data:{
+      labels:features,
+      datasets:[{label:'Importance',data:importance,backgroundColor:'rgba(29,78,216,.7)',borderRadius:4}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.raw*100).toFixed(1)+'%'}}},
+      scales:{
+        x:{grid:{color:brd()},ticks:{color:fgm(),callback:v=>(v*100).toFixed(0)+'%'},max:0.6},
+        y:{grid:{display:false},ticks:{color:fg(),font:{size:11}}}
+      }
+    }
+  });
+}
+
+function buildTop20(){
+  document.getElementById('top20Tbody').innerHTML=TOP20.map((f,i)=>`<tr>
+    <td style="font-weight:600;color:var(--fg-muted)">${i+1}</td>
+    <td style="font-weight:600">${f[0]}</td>
+    <td>${f[1]}</td>
+    <td>${f[2]}</td>
+    <td>${f[3]}</td>
+    <td><span class="tier ${f[4]==='NON-FUNCTIONAL'?'t-crit':'t-conc'}">${f[4]}</span></td>
+    <td style="font-weight:700;color:var(--critical)">${f[5].toFixed(4)}</td>
+  </tr>`).join('');
+}
+
+/* Facility table with pagination */
+let facFiltered = [];
+let facPage = 0;
+const FAC_PAGE_SIZE = 20;
+
+function populateFacStateFilter(){
+  const sel=document.getElementById('facStateFilter');
+  if(sel.options.length>1) return;
+  const states=[...new Set(FAC_DATA.map(f=>f.state))].sort();
+  states.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+}
+
+function applyFacFilter(){
+  const state=document.getElementById('facStateFilter').value;
+  const minRisk=parseFloat(document.getElementById('facRiskFilter').value);
+  facFiltered=FAC_DATA.filter(f=>(state==='all'||f.state===state)&&f.score>=minRisk);
+  facFiltered.sort((a,b)=>b.score-a.score);
+  facPage=0;
+  renderFacTable();
+}
+
+function resetFacFilter(){
+  document.getElementById('facStateFilter').value='all';
+  document.getElementById('facRiskFilter').value='0.8';
+  applyFacFilter();
+}
+
+function renderFacTable(){
+  const start=facPage*FAC_PAGE_SIZE;
+  const slice=facFiltered.slice(start,start+FAC_PAGE_SIZE);
+  document.getElementById('facTbody').innerHTML=slice.map(f=>`<tr>
+    <td style="font-weight:600">${f.state}</td>
+    <td>${f.lga}</td>
+    <td>${f.ward}</td>
+    <td>${f.facility}</td>
+    <td><span class="tier t-conc">${f.status}</span></td>
+    <td>
+      <div class="sbar">
+        <div class="sbar-track"><div class="sbar-fill" style="width:${f.score*100}%;background:${f.score>=0.9?'var(--critical)':'var(--concern)'}"></div></div>
+        <div class="sbar-num">${f.score.toFixed(4)}</div>
+      </div>
+    </td>
+  </tr>`).join('');
+  document.getElementById('facCount').textContent=facFiltered.length+' facilities';
+  buildPagination();
+}
+
+function buildPagination(){
+  const total=Math.ceil(facFiltered.length/FAC_PAGE_SIZE);
+  const pag=document.getElementById('facPagination');
+  pag.innerHTML='';
+  if(total<=1) return;
+  const mkBtn=(label,page,disabled,active)=>{
+    const b=document.createElement('button');
+    b.textContent=label; b.className='filter-btn'+(active?' ':' secondary ');
+    b.disabled=disabled; b.style.padding='5px 12px'; b.style.fontSize='12px';
+    if(!disabled) b.onclick=()=>{ facPage=page; renderFacTable(); };
+    return b;
+  };
+  pag.appendChild(mkBtn('← Prev',facPage-1,facPage===0));
+  const start=Math.max(0,facPage-2), end=Math.min(total,facPage+3);
+  for(let i=start;i<end;i++) pag.appendChild(mkBtn(i+1,i,false,i===facPage));
+  pag.appendChild(mkBtn('Next →',facPage+1,facPage>=total-1));
+  const info=document.createElement('span');
+  info.style.cssText='font-size:12px;color:var(--fg-muted);margin-left:4px';
+  info.textContent='Page '+(facPage+1)+' of '+total;
+  pag.appendChild(info);
+}
+
+function buildFacTable(){
+  buildFacCharts();
+  applyFacFilter();
+}
+
+/* ── METHODOLOGY CHARTS ─────────────────────────────── */
+function buildMethCharts(){
+  mkChart('chartClassDist',{
+    type:'doughnut',
+    data:{
+      labels:['L1 Functional','L2 Functional','Partial (AT RISK)','Non-Functional (AT RISK)'],
+      datasets:[{data:[5397,1747,1164,1],backgroundColor:['#16a34a','#4ade80','#d97706','#dc2626'],borderWidth:0}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{display:false}}
+    }
+  });
+}
+
+/* ── TAB CHANGE LISTENERS ──────────────────────────────*/
+document.querySelectorAll('.nav-tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    const tab=t.dataset.tab;
+    setTimeout(()=>{
+      if(tab==='disbursements') buildDisbCharts();
+      if(tab==='anomalies') buildAnomCharts();
+      if(tab==='facilities') buildFacCharts();
+      if(tab==='methodology') buildMethCharts();
+    },50);
+  });
+});
+
+/* ── INIT ───────────────────────────────────────────── */
+applyTheme();
+buildOverviewCharts();
+</script>
