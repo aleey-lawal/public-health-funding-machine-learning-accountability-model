@@ -13,6 +13,8 @@ This project tracks ₦57.1 billion disbursed across 37 Nigerian states and FCT 
 **Live dashboard:** [bhcpf-tracker.streamlit.app](https://bhcpf-tracker.streamlit.app) *(replace with your deployed URL)*  
 **Static HTML version:** [GitHub Pages](https://your-username.github.io/bhcpf-accountability) *(replace with your URL)*
 
+This project extends the [BHCPF Interactive Accountability Map](https://legendary-churros-fc5ebd.netlify.app) — a citizen-facing tool where anyone can click on a facility, navigate to its location, and verify whether it is functional, partially functional, or non-functional. This ML version adds anomaly detection and a facility risk model to flag states and PHCs warranting further investigation.
+
 ---
 
 ## Key Findings
