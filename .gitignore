@@ -22,7 +22,6 @@ data/raw/
 !data/sample_data.csv       # Keep sample CSV for demo purposes
 
 # --- ML model artifacts (large binary files) ---
-models/*.pkl
 models/*.joblib
 models/*.h5
 

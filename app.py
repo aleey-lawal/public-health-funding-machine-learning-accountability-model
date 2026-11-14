@@ -237,12 +237,13 @@ st.markdown("""
 # =============================================================================
 # TABS — Five sections matching the HTML dashboard
 # =============================================================================
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Overview",
     "💰 Disbursements",
     "🔍 Anomaly Detection",
     "🏥 Facility Risk",
-    "📋 Methodology"
+    "📋 Methodology",
+    "🤖 Risk Predictor"
 ])
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -716,6 +717,205 @@ with tab5:
     ds2.info("**PHC Facility Registry**\n8,309 facilities with state, LGA, ward, name, and functional status. Source: NPHCDA national registry.")
     ds3.warning("**Population Estimates**\nNPC 2023 state projections (2006 census base). **Limitation:** not a fresh enumeration.")
     ds4.info("**Analysis Pipeline**\nPython 3 · scikit-learn · pandas · scipy. Developed by Lawal Lawal Ali, October 2026.")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB 6: RISK PREDICTOR
+# ─────────────────────────────────────────────────────────────────────────────
+with tab6:
+    st.subheader("🤖 Facility Risk Predictor")
+    st.markdown("""
+    Enter facility and state details below. The model will predict whether the facility
+    is **FUNCTIONAL** or **AT RISK** based on the trained Random Forest classifier
+    (300 trees, ROC-AUC 0.793).
+    """)
+
+    # --- Load model (cached so it only loads once per session) ---
+    @st.cache_resource
+    def load_model():
+        """Load the saved Random Forest model from disk."""
+        import joblib, os
+        model_path = os.path.join(os.path.dirname(__file__), "models", "facility_risk_model.pkl")
+        if not os.path.exists(model_path):
+            return None
+        return joblib.load(model_path)
+
+    rf_model = load_model()
+
+    if rf_model is None:
+        st.warning("Model file not found. Make sure `models/facility_risk_model.pkl` exists in the project folder.")
+    else:
+        # State list (sorted, matches state_enc 0–36)
+        STATES_LIST = [
+            "ABIA","ADAMAWA","AKWA IBOM","ANAMBRA","BAUCHI","BAYELSA","BENUE","BORNO",
+            "CROSS RIVER","DELTA","EBONYI","EDO","EKITI","ENUGU","FCT","GOMBE","IMO",
+            "JIGAWA","KADUNA","KANO","KATSINA","KEBBI","KOGI","KWARA","LAGOS","NASARAWA",
+            "NIGER","OGUN","ONDO","OSUN","OYO","PLATEAU","RIVERS","SOKOTO","TARABA",
+            "YOBE","ZAMFARA"
+        ]
+
+        # Consensus score per state (from ML pipeline results)
+        STATE_CONSENSUS = {
+            "ABIA":0,"ADAMAWA":0,"AKWA IBOM":0,"ANAMBRA":0,"BAUCHI":0,"BAYELSA":0,
+            "BENUE":0,"BORNO":3,"CROSS RIVER":0,"DELTA":0,"EBONYI":0,"EDO":0,
+            "EKITI":0,"ENUGU":0,"FCT":2,"GOMBE":0,"IMO":0,"JIGAWA":0,"KADUNA":0,
+            "KANO":3,"KATSINA":3,"KEBBI":0,"KOGI":0,"KWARA":0,"LAGOS":1,"NASARAWA":0,
+            "NIGER":0,"OGUN":0,"ONDO":0,"OSUN":0,"OYO":0,"PLATEAU":0,"RIVERS":0,
+            "SOKOTO":2,"TARABA":0,"YOBE":1,"ZAMFARA":2
+        }
+
+        # --- Input form ---
+        with st.form("predictor_form"):
+            st.markdown("#### Facility & State Details")
+
+            col_a, col_b = st.columns(2)
+
+            with col_a:
+                selected_state = st.selectbox(
+                    "State",
+                    STATES_LIST,
+                    help="Select the state where the facility is located"
+                )
+                lga_enc = st.number_input(
+                    "LGA Encoded ID (0–760)",
+                    min_value=0, max_value=760, value=100,
+                    help="The numeric ID assigned to the LGA in the NPHCDA registry (0–760)"
+                )
+                total_ytd = st.number_input(
+                    "Total YTD Disbursement (₦)",
+                    min_value=810_000_000, max_value=3_200_000_000,
+                    value=1_000_000_000, step=10_000_000,
+                    help="Total year-to-date BHCPF disbursement for the state (₦)"
+                )
+                ytd_per_facility = st.number_input(
+                    "YTD per Facility (₦)",
+                    min_value=4_000_000, max_value=18_000_000,
+                    value=8_000_000, step=100_000,
+                    help="Average YTD disbursement per facility in the LGA (₦)"
+                )
+                ytd_per_million_pop = st.number_input(
+                    "YTD per Million Population (₦)",
+                    min_value=500_000, max_value=20_000_000,
+                    value=5_000_000, step=100_000,
+                    help="YTD disbursement per million population in the state (₦)"
+                )
+
+            with col_b:
+                functionality_score = st.slider(
+                    "Functionality Score (0.61–0.88)",
+                    min_value=0.61, max_value=0.88, value=0.75, step=0.01,
+                    help="Proportion of facilities in the LGA that are functional"
+                )
+                efficiency_index = st.slider(
+                    "Efficiency Index (0.0–2.0)",
+                    min_value=0.0, max_value=2.0, value=1.0, step=0.05,
+                    help="Ratio of output to disbursement (higher = more efficient)"
+                )
+                qoq_volatility = st.slider(
+                    "Quarter-on-Quarter Volatility (0.0–1.0)",
+                    min_value=0.0, max_value=1.0, value=0.1, step=0.01,
+                    help="How much disbursement swings between quarters (higher = more volatile)"
+                )
+                gateway_entropy = st.slider(
+                    "Gateway Entropy (0.0–3.0)",
+                    min_value=0.0, max_value=3.0, value=1.5, step=0.1,
+                    help="Distribution evenness of fund routing channels (higher = more spread)"
+                )
+                paradox_flag = st.selectbox(
+                    "Paradox Flag",
+                    [0, 1],
+                    format_func=lambda x: "No anomaly (0)" if x == 0 else "Paradox detected (1)",
+                    help="1 if the facility shows a high-disbursement but low-functionality paradox"
+                )
+
+            submitted = st.form_submit_button("🔍 Predict Risk", use_container_width=True)
+
+        # --- Run prediction when form is submitted ---
+        if submitted:
+            # Derive encoded values from selected state
+            state_enc   = STATES_LIST.index(selected_state)       # 0–36
+            consensus   = STATE_CONSENSUS[selected_state]          # 0–3
+
+            # Anomaly scores: approximate from consensus score
+            # (iso_score < 0 = anomaly; lof_score > 1.5 = anomaly)
+            iso_score = -0.1 * consensus if consensus > 0 else 0.05
+            lof_score = 1.0 + (0.3 * consensus)
+
+            # pct_non_functional was 0.0 across the entire dataset
+            pct_non_functional = 0.0
+
+            # Build feature array in exact training order
+            # ['state_enc','lga_enc','total_ytd','ytd_per_facility','ytd_per_million_pop',
+            #  'functionality_score','pct_non_functional','qoq_volatility','gateway_entropy',
+            #  'efficiency_index','paradox_flag','consensus_score','iso_score','lof_score']
+            features = np.array([[
+                state_enc, lga_enc, total_ytd, ytd_per_facility, ytd_per_million_pop,
+                functionality_score, pct_non_functional, qoq_volatility, gateway_entropy,
+                efficiency_index, paradox_flag, consensus, iso_score, lof_score
+            ]])
+
+            # Get prediction and probability
+            prediction = rf_model.predict(features)[0]           # 0 = FUNCTIONAL, 1 = AT RISK
+            probability = rf_model.predict_proba(features)[0]    # [prob_functional, prob_at_risk]
+
+            prob_at_risk    = probability[1]
+            prob_functional = probability[0]
+
+            st.markdown("---")
+            st.markdown("#### Prediction Result")
+
+            if prediction == 1:
+                # AT RISK result
+                st.error(f"🔴 **AT RISK** — Confidence: {prob_at_risk:.1%}")
+                st.markdown(f"""
+                The model predicts this facility is **AT RISK** with **{prob_at_risk:.1%} confidence**.
+                This means the facility is likely partially functional or non-functional based on the
+                inputs provided. Further investigation is recommended.
+                """)
+            else:
+                # FUNCTIONAL result
+                st.success(f"🟢 **FUNCTIONAL** — Confidence: {prob_functional:.1%}")
+                st.markdown(f"""
+                The model predicts this facility is **FUNCTIONAL** with **{prob_functional:.1%} confidence**.
+                Based on the inputs provided, this facility shows no significant risk indicators.
+                """)
+
+            # Probability bar chart
+            fig_prob = go.Figure(go.Bar(
+                x=["FUNCTIONAL", "AT RISK"],
+                y=[prob_functional, prob_at_risk],
+                marker_color=["#16a34a", "#dc2626"],
+                text=[f"{prob_functional:.1%}", f"{prob_at_risk:.1%}"],
+                textposition="outside"
+            ))
+            fig_prob.update_layout(
+                title="Prediction Confidence",
+                yaxis=dict(range=[0, 1], tickformat=".0%"),
+                height=300,
+                margin=dict(t=40, b=20)
+            )
+            st.plotly_chart(fig_prob, use_container_width=True)
+
+            # Show the input summary
+            with st.expander("View input values used"):
+                input_summary = {
+                    "State": selected_state,
+                    "State Enc": state_enc,
+                    "LGA Enc": lga_enc,
+                    "Total YTD (₦)": f"{total_ytd:,.0f}",
+                    "YTD per Facility (₦)": f"{ytd_per_facility:,.0f}",
+                    "YTD per Million Pop (₦)": f"{ytd_per_million_pop:,.0f}",
+                    "Functionality Score": functionality_score,
+                    "Efficiency Index": efficiency_index,
+                    "QoQ Volatility": qoq_volatility,
+                    "Gateway Entropy": gateway_entropy,
+                    "Paradox Flag": paradox_flag,
+                    "Consensus Score (auto)": consensus,
+                    "ISO Score (auto)": round(iso_score, 3),
+                    "LOF Score (auto)": round(lof_score, 3),
+                }
+                st.dataframe(pd.DataFrame(input_summary.items(), columns=["Feature", "Value"]))
+
+        st.caption("⚠️ Predictions are model estimates only. Findings require field validation before formal action.")
 
 # =============================================================================
 # FOOTER
