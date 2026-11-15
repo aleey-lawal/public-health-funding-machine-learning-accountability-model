@@ -1,4 +1,4 @@
-# BHCPF Accountability Tracker
+# BHCPF ML Accountability Model
 
 **ML-powered public accountability dashboard for the Basic Health Care Provision Fund (BHCPF)**
 
@@ -14,7 +14,7 @@ This project tracks ₦57.1 billion disbursed across 37 Nigerian states and FCT 
 
 **GitHub repo:** https://github.com/aleey-lawal/public-health-funding-machine-learning-accountability-model
 
-This project extends the [BHCPF Interactive Accountability Map](https://legendary-churros-fc5ebd.netlify.app) — a citizen-facing tool where anyone can click on a facility, navigate to its location, and verify whether it is functional, partially functional, or non-functional. This ML version adds anomaly detection and a facility risk model to flag states and PHCs warranting further investigation.
+This project extends the [BHCPF Interactive Accountability Map](https://legendary-churros-fc5ebd.netlify.app) — a citizen-facing tool where citizens can explore state-by-state allocation breakdowns, click on a facility, navigate to its location, and verify whether it is functional, partially functional, or non-functional. This ML version adds anomaly detection and a facility risk model to flag states and PHCs warranting further investigation.
 
 ---
 
