@@ -11,6 +11,7 @@
 This project tracks ₦57.1 billion disbursed across 37 Nigerian states and FCT under the BHCPF programme, Q1–Q3 2025. It combines unsupervised anomaly detection with a supervised facility-level risk model to flag states and primary health care (PHC) facilities warranting further investigation.
 
 **Live dashboard:** [bhcpf-tracker.streamlit.app](https://public-health-funding-machine-learning-accountability-model-gw.streamlit.app/) 
+
 **GitHub repo:** https://github.com/aleey-lawal/public-health-funding-machine-learning-accountability-model
 
 This project extends the [BHCPF Interactive Accountability Map](https://legendary-churros-fc5ebd.netlify.app) — a citizen-facing tool where anyone can click on a facility, navigate to its location, and verify whether it is functional, partially functional, or non-functional. This ML version adds anomaly detection and a facility risk model to flag states and PHCs warranting further investigation.
