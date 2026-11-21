@@ -116,22 +116,26 @@ import os, joblib
 @st.cache_data
 def load_states():
     base = os.path.dirname(__file__)
-    # anomaly_results.csv has state features + iso/lof/consensus scores
-    df = pd.read_csv(os.path.join(base, "output", "anomaly_results.csv"))
 
-    # Rename quarterly columns to short names the chart code expects
+    # Quarterly disbursements + features come from state_features.csv
+    df = pd.read_csv(os.path.join(base, "output", "state_features.csv"))
+
+    # Anomaly tier comes from anomaly_results.csv
+    anom = pd.read_csv(os.path.join(base, "output", "anomaly_results.csv"))
+    anom = anom[["state", "consensus_score"]].copy()
+
+    df = df.merge(anom, on="state", how="left")
+
+    # Rename quarterly columns
     df = df.rename(columns={"total_q1": "q1", "total_q2": "q2", "total_q3": "q3"})
 
     # Convert naira → ₦ millions for display
     for col in ["q1", "q2", "q3", "total_ytd"]:
         df[col] = (df[col] / 1_000_000).round(1)
 
-    # Derive tier from consensus_score
     tier_map = {3: "CRITICAL", 2: "CONCERN", 1: "WATCH", 0: "CLEAN"}
     df["tier"] = df["consensus_score"].map(tier_map)
-
     return df
-
 @st.cache_data
 def load_high_risk_counts():
     base = os.path.dirname(__file__)
@@ -964,7 +968,7 @@ with tab6:
 # =============================================================================
 st.markdown("""
 <div class="footer">
-    BHCPF Accountability Tracker · Developed by Lawal Lawal Ali · October 2026<br>
+    BHCPF Accountability Tracker · Developed by Lawal Lawal Ali ·<br>
     ML Pipeline: Random Forest (ROC-AUC 0.793) · Anomaly Detection: Isolation Forest + LOF + Z-score<br>
     <em>This report is for public accountability purposes. Findings require validation before formal action.</em>
 </div>
