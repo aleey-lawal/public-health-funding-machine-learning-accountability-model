@@ -108,72 +108,57 @@ footer {visibility: hidden;}
 #        name, q1, q2, q3, tier, consensus_score,
 #        functionality_score, total_facilities, high_risk_facilities
 # =============================================================================
-STATE_RECORDS = [
-    # Normal states (CLEAN — no anomaly flags raised)
-    ("ABIA",        337, 345, 342, "CLEAN",    0, 0.76, 198,  12),
-    ("ADAMAWA",     385, 394, 391, "CLEAN",    0, 0.72, 231,  15),
-    ("AKWA IBOM",   497, 508, 505, "CLEAN",    0, 0.80, 310,  18),
-    ("ANAMBRA",     506, 517, 514, "CLEAN",    0, 0.83, 285,  14),
-    ("BAUCHI",      598, 611, 606, "CLEAN",    0, 0.68, 356,  28),
-    ("BAYELSA",     224, 229, 227, "CLEAN",    0, 0.75, 142,   8),
-    ("BENUE",       527, 539, 535, "CLEAN",    0, 0.71, 324,  24),
-    # CRITICAL: flagged by all 3 anomaly methods — extreme Q2 spike then Q3 drop
-    ("BORNO",       404, 814, 293, "CRITICAL", 3, 0.55, 348,  72),
-    ("CROSS RIVER", 341, 349, 346, "CLEAN",    0, 0.74, 212,  13),
-    ("DELTA",       522, 534, 530, "CLEAN",    0, 0.78, 318,  20),
-    ("EBONYI",      292, 299, 296, "CLEAN",    0, 0.73, 178,  11),
-    ("EDO",         435, 445, 442, "CLEAN",    0, 0.80, 268,  16),
-    ("EKITI",       299, 306, 304, "CLEAN",    0, 0.78, 186,  10),
-    ("ENUGU",       404, 414, 410, "CLEAN",    0, 0.80, 248,  14),
-    # CONCERN: FCT — sustained Q2+Q3 elevation, gateway routing anomaly
-    ("FCT",         310, 477, 477, "CONCERN",  2, 0.65, 162,  18),
-    ("GOMBE",       326, 333, 330, "CLEAN",    0, 0.69, 198,  14),
-    ("IMO",         496, 507, 504, "CLEAN",    0, 0.76, 304,  19),
-    ("JIGAWA",      532, 544, 540, "CLEAN",    0, 0.65, 324,  25),
-    ("KADUNA",      756, 773, 767, "CLEAN",    0, 0.71, 462,  32),
-    # CRITICAL: Kano — largest Q2 spike in the entire dataset
-    ("KANO",       1182,2050, 840, "CRITICAL", 3, 0.52, 892, 148),
-    # CRITICAL: Katsina — Q2 spike pattern similar to Kano and Borno
-    ("KATSINA",     740,1200, 452, "CRITICAL", 3, 0.56, 468,  82),
-    ("KEBBI",       404, 414, 410, "CLEAN",    0, 0.67, 248,  18),
-    ("KOGI",        410, 419, 415, "CLEAN",    0, 0.72, 254,  17),
-    ("KWARA",       289, 296, 294, "CLEAN",    0, 0.78, 178,  10),
-    # WATCH: Lagos — outlier scale; flagged by 1 method (Z-score)
-    ("LAGOS",      1416,1448,1439, "WATCH",    1, 0.86, 724,  48),
-    ("NASARAWA",    247, 252, 250, "CLEAN",    0, 0.72, 152,  10),
-    ("NIGER",       554, 567, 562, "CLEAN",    0, 0.68, 338,  24),
-    ("OGUN",        526, 538, 534, "CLEAN",    0, 0.80, 320,  19),
-    ("ONDO",        427, 437, 433, "CLEAN",    0, 0.78, 262,  16),
-    ("OSUN",        431, 441, 437, "CLEAN",    0, 0.79, 265,  15),
-    ("OYO",         785, 803, 797, "CLEAN",    0, 0.76, 476,  32),
-    ("PLATEAU",     365, 373, 370, "CLEAN",    0, 0.72, 224,  15),
-    ("RIVERS",      669, 684, 679, "CLEAN",    0, 0.80, 408,  26),
-    # CONCERN: Sokoto — sustained high Q2+Q3, lowest functionality score (0.48)
-    ("SOKOTO",      462, 817, 816, "CONCERN",  2, 0.48, 298,  62),
-    ("TARABA",      300, 307, 304, "CLEAN",    0, 0.70, 184,  12),
-    # WATCH: Yobe — Q2 spike then partial recovery in Q3
-    ("YOBE",        303, 485, 297, "WATCH",    1, 0.63, 186,  18),
-    # CONCERN: Zamfara — sustained Q2+Q3 elevation like Sokoto
-    ("ZAMFARA",     383, 667, 667, "CONCERN",  2, 0.59, 243,  28),
-]
+# =============================================================================
+# DATA — Loaded from pipeline output CSVs
+# =============================================================================
+import os, joblib
 
-# Build a DataFrame from the records for easy manipulation
-df_states = pd.DataFrame(STATE_RECORDS, columns=[
-    "state", "q1", "q2", "q3", "tier", "consensus_score",
-    "functionality_score", "total_facilities", "high_risk_facilities"
-])
+@st.cache_data
+def load_states():
+    base = os.path.dirname(__file__)
+    # anomaly_results.csv has state features + iso/lof/consensus scores
+    df = pd.read_csv(os.path.join(base, "output", "anomaly_results.csv"))
 
-# Compute derived columns
-df_states["total_ytd"]  = df_states["q1"] + df_states["q2"] + df_states["q3"]  # Year-to-date total
-df_states["qoq_q2_pct"] = ((df_states["q2"] - df_states["q1"]) / df_states["q1"] * 100).round(1)  # Q2 growth %
-df_states["qoq_q3_pct"] = ((df_states["q3"] - df_states["q2"]) / df_states["q2"] * 100).round(1)  # Q3 growth %
+    # Rename quarterly columns to short names the chart code expects
+    df = df.rename(columns={"total_q1": "q1", "total_q2": "q2", "total_q3": "q3"})
 
-# Colour map for each risk tier (consistent across all charts)
+    # Convert naira → ₦ millions for display
+    for col in ["q1", "q2", "q3", "total_ytd"]:
+        df[col] = (df[col] / 1_000_000).round(1)
+
+    # Derive tier from consensus_score
+    tier_map = {3: "CRITICAL", 2: "CONCERN", 1: "WATCH", 0: "CLEAN"}
+    df["tier"] = df["consensus_score"].map(tier_map)
+
+    return df
+
+@st.cache_data
+def load_high_risk_counts():
+    base = os.path.dirname(__file__)
+    fac = pd.read_csv(os.path.join(base, "output", "facility_risk_scores.csv"))
+    # Count facilities per state with risk_score >= 0.80
+    counts = (
+        fac[fac["risk_score"] >= 0.80]
+        .groupby("state")
+        .size()
+        .reset_index(name="high_risk_facilities")
+    )
+    return counts
+
+df_states = load_states()
+hr_counts = load_high_risk_counts()
+df_states = df_states.merge(hr_counts, on="state", how="left")
+df_states["high_risk_facilities"] = df_states["high_risk_facilities"].fillna(0).astype(int)
+
+# Recompute derived columns (in case they're not in the CSV)
+df_states["qoq_q2_pct"] = ((df_states["q2"] - df_states["q1"]) / df_states["q1"] * 100).round(1)
+df_states["qoq_q3_pct"] = ((df_states["q3"] - df_states["q2"]) / df_states["q2"] * 100).round(1)
+
 TIER_COLORS = {
-    "CRITICAL": "#dc2626",   # Red
-    "CONCERN":  "#d97706",   # Amber
-    "WATCH":    "#2563eb",   # Blue
-    "CLEAN":    "#94a3b8",   # Grey
+    "CRITICAL": "#dc2626",
+    "CONCERN":  "#d97706",
+    "WATCH":    "#2563eb",
+    "CLEAN":    "#94a3b8",
 }
 
 # Top 20 highest-risk facilities from the pipeline output
@@ -422,27 +407,84 @@ with tab2:
     fig_all.update_layout(height=400, xaxis_tickangle=-45, margin=dict(t=40,b=80))
     st.plotly_chart(fig_all, use_container_width=True)
 
-    # --- Grouped bar chart: Q1/Q2/Q3 for anomaly states only ---
-    st.subheader("Quarter-over-Quarter — Anomaly States")
-    st.caption("Shows the Q2 spikes in CRITICAL states and sustained Q2+Q3 elevation in CONCERN states.")
-    df_anom = df_states[df_states["tier"] != "CLEAN"].sort_values("tier")  # Anomaly states only
-    # Reshape from wide (q1,q2,q3 columns) to long format for grouped bar chart
-    df_anom_long = df_anom.melt(
-        id_vars=["state","tier"],
-        value_vars=["q1","q2","q3"],
-        var_name="Quarter",
-        value_name="Amount"
+        # --- Scatter: funding intensity vs functionality (all 37 states) ---
+    st.subheader("The Accountability Signal — Funding vs Functionality")
+    st.caption(
+        "Each dot is a state. CRITICAL/CONCERN states appear bottom-right: "
+        "high disbursement per facility, low functionality score. "
+        "That disconnect is what the ML detected."
     )
-    df_anom_long["Quarter"] = df_anom_long["Quarter"].str.upper()  # Q1→Q1, q2→Q2 etc.
-    fig_qoq = px.bar(
-        df_anom_long,
-        x="state", y="Amount", color="Quarter",
-        barmode="group",                        # Side-by-side bars per state
-        title="Q1 / Q2 / Q3 Comparison — Flagged States",
-        color_discrete_map={"Q1":"#3b82f6","Q2":"#dc2626","Q3":"#93c5fd"},
+
+    # ytd_per_facility is in naira — convert to ₦M for the chart axis
+    df_plot = df_states.copy()
+    df_plot["ytd_per_fac_M"] = (df_plot["ytd_per_facility"] / 1_000_000).round(2)
+
+    avg_fac_M = df_plot["ytd_per_fac_M"].mean()
+    avg_func  = df_plot["functionality_score"].mean()
+
+    fig_scatter = px.scatter(
+        df_plot,
+        x="ytd_per_fac_M",
+        y="functionality_score",
+        color="tier",
+        color_discrete_map=TIER_COLORS,
+        text="state",
+        title="Funding Intensity vs Facility Functionality — All 37 States",
+        labels={
+            "ytd_per_fac_M":       "YTD per Facility (₦ Million)",
+            "functionality_score": "Functionality Score (0 = all broken, 1 = all fully functional)",
+        },
+        hover_data={"consensus_score": True, "total_ytd": True, "tier": True},
     )
-    fig_qoq.update_layout(height=360, margin=dict(t=40,b=20))
-    st.plotly_chart(fig_qoq, use_container_width=True)
+    fig_scatter.update_traces(textposition="top center", textfont_size=8)
+    fig_scatter.add_hline(
+        y=avg_func, line_dash="dot", line_color="#64748b", opacity=0.6,
+        annotation_text=f"Avg functionality ({avg_func:.2f})",
+        annotation_position="bottom right",
+    )
+    fig_scatter.add_vline(
+        x=avg_fac_M, line_dash="dot", line_color="#64748b", opacity=0.6,
+        annotation_text=f"Avg ₦{avg_fac_M:.1f}M/facility",
+        annotation_position="top left",
+    )
+    fig_scatter.update_layout(height=440, margin=dict(t=40, b=20))
+    st.plotly_chart(fig_scatter, use_container_width=True)
+
+    # --- Efficiency index bar: flagged states vs national average ---
+    st.subheader("Efficiency Index — Flagged States")
+    st.caption(
+        "Efficiency Index = functionality_score ÷ log(ytd_per_facility + 1). "
+        "Lower means worse health outcomes per naira spent. "
+        "CRITICAL states sit below the national average."
+    )
+
+    df_anom = df_states[df_states["tier"] != "CLEAN"].sort_values("efficiency_index")
+    nat_avg  = df_states["efficiency_index"].mean()
+
+    fig_eff = go.Figure()
+    fig_eff.add_trace(go.Bar(
+        x=df_anom["efficiency_index"],
+        y=df_anom["state"],
+        orientation="h",
+        marker_color=[TIER_COLORS[t] for t in df_anom["tier"]],
+        text=[f"{v:.4f}" for v in df_anom["efficiency_index"]],
+        textposition="outside",
+    ))
+    fig_eff.add_vline(
+        x=nat_avg, line_dash="dash", line_color="#94a3b8",
+        annotation_text=f"National avg: {nat_avg:.4f}",
+        annotation_position="top right",
+    )
+    fig_eff.update_layout(
+        title="Efficiency Index — Anomaly States (lower = worse value per ₦)",
+        xaxis_title="Efficiency Index",
+        height=340,
+        margin=dict(t=40, b=20),
+        showlegend=False,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    st.plotly_chart(fig_eff, use_container_width=True)
 
     # --- Data table ---
     st.subheader("Full State Table")
