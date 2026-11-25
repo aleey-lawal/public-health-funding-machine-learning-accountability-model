@@ -330,18 +330,32 @@ with tab1:
 
     with ch3:
         # Sort by high-risk facility count descending, take top 10
-        top_risk = df_states.nlargest(10, "high_risk_facilities")[["state","high_risk_facilities","tier"]]
+        # Sort ascending so plotly renders highest value at top of horizontal chart
+        top_risk = (
+            df_states.nlargest(10, "high_risk_facilities")
+            [["state", "high_risk_facilities", "tier"]]
+            .sort_values("high_risk_facilities", ascending=True)
+        )
         fig_toprisk = px.bar(
             top_risk,
             x="high_risk_facilities",
             y="state",
-            orientation="h",                    # Horizontal bar chart
+            orientation="h",
             color="tier",
             color_discrete_map=TIER_COLORS,
             title="Top 10 States — High-Risk Facilities",
-            labels={"high_risk_facilities": "Facilities (score ≥ 0.80)", "state": ""}
+            labels={"high_risk_facilities": "Facilities (score ≥ 0.80)", "state": ""},
+            text="high_risk_facilities",
         )
-        fig_toprisk.update_layout(height=300, margin=dict(t=40, b=20), showlegend=False)
+        fig_toprisk.update_traces(textposition="outside", textfont_size=11)
+        fig_toprisk.update_layout(
+            height=340,
+            margin=dict(t=40, b=20, r=60),
+            showlegend=False,
+            xaxis=dict(title="Facilities (score ≥ 0.80)", autorange=True),
+            uniformtext_minsize=9,
+            uniformtext_mode="hide",
+        )
         st.plotly_chart(fig_toprisk, use_container_width=True)
 
     with ch4:
@@ -408,7 +422,14 @@ with tab2:
         labels={"total_ytd":"₦ Million","state":"State"},
         hover_data={"q1":True,"q2":True,"q3":True,"functionality_score":True},
     )
-    fig_all.update_layout(height=400, xaxis_tickangle=-45, margin=dict(t=40,b=80))
+    fig_all.update_layout(
+        height=420,
+        xaxis_tickangle=-55,
+        xaxis_tickfont=dict(size=10),
+        margin=dict(t=40, b=100),
+        uniformtext_minsize=8,
+        uniformtext_mode="hide",
+    )
     st.plotly_chart(fig_all, use_container_width=True)
 
         # --- Scatter: funding intensity vs functionality (all 37 states) ---
@@ -440,7 +461,12 @@ with tab2:
         },
         hover_data={"consensus_score": True, "total_ytd": True, "tier": True},
     )
-    fig_scatter.update_traces(textposition="top center", textfont_size=8)
+    fig_scatter.update_traces(
+        textposition="top center",
+        textfont_size=7,
+        marker=dict(size=10, opacity=0.85),
+        cliponaxis=False,
+    )
     fig_scatter.add_hline(
         y=avg_func, line_dash="dot", line_color="#64748b", opacity=0.6,
         annotation_text=f"Avg functionality ({avg_func:.2f})",
@@ -448,10 +474,33 @@ with tab2:
     )
     fig_scatter.add_vline(
         x=avg_fac_M, line_dash="dot", line_color="#64748b", opacity=0.6,
-        annotation_text=f"Avg ₦{avg_fac_M:.1f}M/facility",
+        annotation_text=f"Avg ₦{avg_fac_M:.1f}M/fac",
         annotation_position="top left",
     )
-    fig_scatter.update_layout(height=440, margin=dict(t=40, b=20))
+    # Shade the high-funding / low-functionality danger zone (bottom-right quadrant)
+    fig_scatter.add_shape(
+        type="rect",
+        x0=avg_fac_M, x1=df_plot["ytd_per_fac_M"].max() * 1.05,
+        y0=df_plot["functionality_score"].min() * 0.98, y1=avg_func,
+        fillcolor="rgba(220,38,38,0.07)",
+        line=dict(width=0),
+        layer="below",
+    )
+    fig_scatter.add_annotation(
+        x=df_plot["ytd_per_fac_M"].max() * 0.98,
+        y=df_plot["functionality_score"].min() * 0.99,
+        text="⚠ HIGH RISK ZONE<br>(high spend, low function)",
+        showarrow=False,
+        font=dict(size=9, color="#dc2626"),
+        xanchor="right",
+        yanchor="bottom",
+        align="right",
+    )
+    fig_scatter.update_layout(
+        height=480,
+        margin=dict(t=50, b=30, l=20, r=20),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+    )
     st.plotly_chart(fig_scatter, use_container_width=True)
 
     # --- Efficiency index bar: flagged states vs national average ---
@@ -482,11 +531,14 @@ with tab2:
     fig_eff.update_layout(
         title="Efficiency Index — Anomaly States (lower = worse value per ₦)",
         xaxis_title="Efficiency Index",
-        height=340,
-        margin=dict(t=40, b=20),
+        height=360,
+        margin=dict(t=40, b=20, r=80),
         showlegend=False,
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
+        uniformtext_minsize=8,
+        uniformtext_mode="hide",
+        yaxis=dict(tickfont=dict(size=11)),
     )
     st.plotly_chart(fig_eff, use_container_width=True)
 
@@ -519,7 +571,15 @@ with tab3:
         title="Anomaly Consensus Score (0–3 methods flagging each state)",
         labels={"consensus_score":"Number of methods flagging state (0–3)","state":"State"},
     )
-    fig_cons.update_layout(height=360, xaxis_tickangle=-45, margin=dict(t=40,b=80), showlegend=True)
+    fig_cons.update_layout(
+        height=380,
+        xaxis_tickangle=-55,
+        xaxis_tickfont=dict(size=10),
+        margin=dict(t=40, b=100),
+        showlegend=True,
+        uniformtext_minsize=8,
+        uniformtext_mode="hide",
+    )
     fig_cons.update_yaxes(tickvals=[0,1,2,3], ticktext=["None","1 method","2 methods","All 3"])
     st.plotly_chart(fig_cons, use_container_width=True)
 
@@ -623,9 +683,16 @@ with tab4:
             text=[f"{v*100:.1f}%" for v in feat_imp],  # Show percentage labels
             textposition="outside"
         ))
-        fig_feat.update_layout(title="Feature Importance (Random Forest)",
-                               xaxis_title="Importance", height=280,
-                               margin=dict(t=40,b=20), showlegend=False)
+        fig_feat.update_layout(
+            title="Feature Importance (Random Forest)",
+            xaxis_title="Importance",
+            height=300,
+            margin=dict(t=40, b=20, r=70),
+            showlegend=False,
+            uniformtext_minsize=8,
+            uniformtext_mode="hide",
+            yaxis=dict(tickfont=dict(size=11)),
+        )
         st.plotly_chart(fig_feat, use_container_width=True)
 
     # --- Confusion matrix ---
@@ -638,24 +705,31 @@ with tab4:
                f"FP: {cm['FP']}\n(FUNCTIONAL wrongly flagged)"],
               [f"FN: {cm['FN']}\n(AT RISK missed)",
                f"TP: {cm['TP']}\n(AT RISK correctly caught)"]]
-    fig_cm = ff.create_annotated_heatmap(   # Note: ff = plotly.figure_factory (imported below)
-        z=z_cm,
-        x=["Predicted FUNCTIONAL","Predicted AT RISK"],
-        y=["Actual FUNCTIONAL","Actual AT RISK"],
-        annotation_text=labels,
-        colorscale="Blues",
-        showscale=False
-    ) if False else go.Figure(go.Heatmap(   # Fallback: manual heatmap (ff may not be installed)
-        z=z_cm,
-        x=["Predicted FUNCTIONAL","Predicted AT RISK"],
-        y=["Actual FUNCTIONAL","Actual AT RISK"],
-        colorscale=[[0,"#dbeafe"],[1,"#1d4ed8"]],
-        text=[[f"TN={cm['TN']}",f"FP={cm['FP']}"],[f"FN={cm['FN']}",f"TP={cm['TP']}"]],
+    # Semantic colorscale: 0 = correct prediction (green), 1 = wrong prediction (red)
+    # z layout: [[TN, FP], [FN, TP]]  — TN and TP are correct (0), FP and FN are wrong (1)
+    z_semantic = [[0, 1], [1, 0]]
+    text_cm = [
+        [f"TN = {cm['TN']}<br>Correctly cleared",  f"FP = {cm['FP']}<br>False alarm"],
+        [f"FN = {cm['FN']}<br>Missed risk",         f"TP = {cm['TP']}<br>Correctly caught"],
+    ]
+    fig_cm = go.Figure(go.Heatmap(
+        z=z_semantic,
+        x=["Predicted FUNCTIONAL", "Predicted AT RISK"],
+        y=["Actual FUNCTIONAL", "Actual AT RISK"],
+        colorscale=[[0, "#16a34a"], [1, "#dc2626"]],
+        text=text_cm,
         texttemplate="%{text}",
-        textfont={"size":16,"color":"white"},
-        showscale=False
+        textfont={"size": 15, "color": "white"},
+        showscale=False,
+        zmin=0, zmax=1,
     ))
-    fig_cm.update_layout(title="Confusion Matrix (Facility Risk Model)",height=280,margin=dict(t=40,b=20))
+    fig_cm.update_layout(
+        title="Confusion Matrix — Facility Risk Model",
+        height=320,
+        margin=dict(t=50, b=30),
+        xaxis=dict(title="Predicted Label", side="bottom", tickfont=dict(size=12)),
+        yaxis=dict(title="Actual Label", tickfont=dict(size=12)),
+    )
     st.plotly_chart(fig_cm, use_container_width=True)
 
     # --- Interpretation of confusion matrix ---
